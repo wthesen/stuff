@@ -1,0 +1,1168 @@
+
+File contents:
+#Schlumberger Private
+#Copyright (c) 2018 Schlumberger
+
+"""Functionality related to the add() API"""
+from typing import Optional, Dict
+import logging
+import json
+import math
+from random import randint
+from collections import defaultdict
+from sixgill.undefined_utils import is_undefined
+from sixgill.utilities import is_greaterthan_or_equal, is_lessthan_or_equal, is_Nan_or_None
+
+from manta.server.manager import PipesimSession
+from manta.server.server_proxy import PipesimServerError
+from manta.api import get_link_params
+
+from sixgill.core.catalog import NodeCatalog
+from sixgill.core.model_context import ModelContext, ContextError
+from sixgill.core.getset import compute_context
+from sixgill.core.mapping_classes import lookup_class_id_for_model_component, ModelComponentClassInfo, \
+    lookup_class_information_for_model_component
+from sixgill.core.resources import POINT_SURFACE_EQUIPMENT, SURFACE_MODEL_COMPONENTS, \
+    FLUID_MODEL_COMPONENTS, DOWNHOLE_MODEL_COMPONENTS, TASK_MODEL_COMPONENTS, EQUIPMENT_WITH_CATALOG, SyntheticContextElements, ModelClasses
+from sixgill.definitions import Parameters, Constants, ALL, NONE, TEMPLATE, NAN, ModelComponents
+from sixgill.core.query import Query
+from sixgill.core.resources import DistributedCompletionModel, SchemaNodes
+from sixgill.compositional import E300_COMPONENT_DICT, GERG_COMPONENT_DICT, MULTIFLASH_COMPONENT_DICT
+from sixgill.core.mapping_dictionaries import *
+
+# Logging functionality
+_logger = logging.Logger(__name__)
+
+
+def _add_fluid_or_surface_object(model, model_component: str, name: str=None, parameters: Dict[str, object]={}):
+    """ """
+    if not model.is_open:
+        raise ValueError('The model has been closed.')
+    if not model_component in SURFACE_MODEL_COMPONENTS and \
+        not model_component in FLUID_MODEL_COMPONENTS:
+        raise ValueError("{} is not a surface equipment or a fluid".format(model_component))
+
+    class_info = lookup_class_information_for_model_component(model_component)
+    if name is None:
+        name = _generate_unique_name(model, model_component)
+
+    if not _is_name_unique(model, model_component, name):
+        raise ValueError('The name {} already exists in the model.'.format(name))
+
+    if model_component is ModelComponents.PVTFLUID:
+        pvt_fluid = model.find(component=ModelComponents.PVTFLUID)
+        if pvt_fluid is not None and len(pvt_fluid) > 0:
+            raise ValueError('A PVTFluid {} already exists in the model.'.format(pvt_fluid[0]))
+
+    node = _add_by_class_info(model, class_info, name, parameters)
+    _set_node_parameters(model, node, parameters)
+
+    if class_info.class_id == ModelClasses.PUMP or class_info.class_id == ModelClasses.COMPRESSOR:
+        _load_catalog_data(model, node, parameters)
+
+    return node
+
+def _add_flow_correlation(model):
+    model_component = ModelComponents.FLOWCORRELATION
+    name = _generate_unique_name(model, model_component)
+    class_info = lookup_class_information_for_model_component(model_component)
+    node = _add_by_class_info(model, class_info, name)
+    return node
+
+def _add_heat_transfer(model):
+    model_component = ModelComponents.HEATTRANSFEROPTIONS
+    class_info = lookup_class_information_for_model_component(model_component)
+    node = _add_by_class_info(model, class_info, None)
+    return node
+
+def _add_study_or_sim_task_object(model, model_component: str, name: str=None, context: str=None, parameters: Dict[str, object]={}):
+
+    if name is None:
+        name = _generate_unique_name(model, model_component)
+
+    if model_component == ModelComponents.STUDY and not _is_name_unique(model, model_component, name):
+        raise ValueError('The name {} already exists in the model.'.format(name))
+
+    if model_component == ModelComponents.STUDY:
+        class_info = lookup_class_information_for_model_component(model_component)
+
+        node = _add_by_class_info(model, class_info, name, parameters)
+        _set_node_parameters(model, node, parameters)
+        return node
+
+    #sim operations need special handling
+    if model_component == ModelComponents.NETWORKSIMULATION:
+        study =_get_study_catalog_entry(context, model._catalog)
+        return _create_net_sim_task(model, name, study.node_id, study.name, parameters)
+
+    if model_component == ModelComponents.NETWORKOPTIMIZERSIMULATION:
+        study =_get_study_catalog_entry(context, model._catalog)
+        return _create_net_opt_sim_task(model, name, study.node_id, study.name, parameters)
+
+    if model_component == ModelComponents.PTPROFILESIMULATION:
+        study = _get_study_entry(model, context)
+        return _create_pt_sim_task(model, name, study.node_id, study.name, parameters)
+
+    if model_component == ModelComponents.SYSTEMANALYSISOPERATION:
+        study = _get_study_catalog_entry(context, model._catalog)
+        return _create_sa_sim_task(model, name, study.node_id, study.name, parameters)
+
+    if model_component == ModelComponents.WELLPERFORMANCECURVESOPERATION:
+        study = _get_study_catalog_entry(context, model._catalog)
+        return _create_wc_sim_task(model, name, study.node_id, study.name, parameters)
+
+    if model_component == ModelComponents.GLDIAGNOSTICSOPERATION:
+        study = _get_study_catalog_entry(context, model._catalog)
+        return _create_gldiagnostics_sim_task(model, name, study.node_id, study.name, parameters)
+
+
+    raise ValueError('The type of the task {} is not supported.'.format(model_component))
+
+def _get_study_catalog_entry(name, catalog):
+    studies = catalog.lookup_entries_by_class_ids([ModelClasses.STUDY])
+    if name:
+        studies = [study for study in studies if study.name == name]
+        if not studies:
+            raise ValueError( "Study {} does not exist. Create the study first.".format(name))
+    elif not studies:
+        raise RuntimeError( "No study exist in the model. Create a study first.")
+    elif len(studies) > 1:
+        raise RuntimeError( "Multiple studies exist in the model. Please specify a study.")
+
+    return studies[0]
+
+def _get_study_entry(model, context):
+    study_name = None
+    study_id = None
+    model_context = None
+    if not context:
+        studies = model.find_components(component=ModelComponents.STUDY)
+        if len(studies) == 0:
+            raise ValueError('no study exists in the model. please create a study first')
+        if len(studies) > 1:
+            raise ValueError('There are multiple studies exist in the model. please specify a study in context parameter.')
+        model_context = studies[0]
+
+    merged_context = compute_context(root_context=model.context,
+                                     context = context, component=ModelComponents.STUDY, model_context=model_context)
+
+    studies = model._catalog.lookup_entries_by_context(merged_context, component=ModelComponents.STUDY)
+    if len(studies) == 0:
+        raise ValueError('no study {} exists in the model'.format(context))
+    if len(studies) > 1:
+        raise ValueError('There are multiple studies {} exist in the model. please correct the model.'.format(context))
+    return studies[0]
+
+def _create_net_sim_task(model, name, study_id, study_name, parameters):
+    from sixgill.core.get_or_create_operation import get_or_create_network_sim_node
+    net_sim = get_or_create_network_sim_node(model, study_name)
+    if parameters:
+        parameters[Parameters.NetworkSimulation.TASKNAME] = name
+    else:
+        parameters = {Parameters.NetworkSimulation.TASKNAME:name}
+    _set_node_parameters(model, net_sim, parameters)
+    return net_sim
+
+def _create_net_opt_sim_task(model, name, study_id, study_name, parameters):
+    from sixgill.core.get_or_create_operation import get_or_create_network_opt_sim_node
+    net_sim = get_or_create_network_opt_sim_node(model, study_name)
+    if parameters:
+        parameters[Parameters.NetworkOptimizerSimulation.TASKNAME] = name
+    else:
+        parameters = {Parameters.NetworkOptimizerSimulation.TASKNAME:name}
+
+    for parameter, value in parameters.items():
+        model.set_node_value(net_sim, parameter=parameter, value=value)
+
+    return net_sim
+
+
+def _create_pt_sim_task(model, name, study_id, study_name, parameters):
+    source_node = None
+    if not parameters:
+       raise ValueError( "No producer node defined in parameters dictionary. A well or source context is required.")
+
+    if (Parameters.PTProfileSimulation.PRODUCER in parameters):
+        source_node = parameters.pop(Parameters.PTProfileSimulation.PRODUCER)
+
+    if (source_node is None):
+       raise ValueError( "No producer node defined in parameters dictionary. A well or source context is required.")
+
+    from sixgill.core.get_or_create_operation import get_or_create_pt_sim_node
+    from sixgill.core.simulations import _set_pt_conditions
+    pt_sim = get_or_create_pt_sim_node(model, source_node, study_name)
+
+    parameters[Parameters.PTProfileSimulation.TASKNAME] = name
+    _set_pt_conditions(model, source_node, parameters, study_name)
+
+    return pt_sim
+
+def _create_sa_sim_task(model, name, study_id, study_name, parameters):
+    source_node = None
+    if not parameters:
+       raise ValueError( "No producer node defined in parameters dictionary. A well or source context is required.")
+
+    if (Parameters.SystemAnalysisSimulation.PRODUCER in parameters):
+        source_node = parameters.pop(Parameters.SystemAnalysisSimulation.PRODUCER)
+
+    if (source_node is None):
+       raise ValueError( "No producer node defined in parameters dictionary. A well or source context is required.")
+
+    from sixgill.core.get_or_create_operation import get_or_create_sa_sim_node
+    from sixgill.core.simulations import _set_sa_conditions
+    sa_sim = get_or_create_sa_sim_node(model, source_node, study_name)
+
+    parameters[Parameters.SystemAnalysisSimulation.TASKNAME] = name
+    _set_sa_conditions(model, source_node, parameters, study_name)
+
+    return sa_sim
+
+def _create_wc_sim_task(model, name, study_id, study_name, parameters):
+    source_node = None
+    if not parameters:
+       raise ValueError( "No producer node defined in parameters dictionary. A well or source context is required.")
+
+    if (Parameters.WellPerformanceCurvesSimulation.PRODUCER in parameters):
+        source_node = parameters.pop(Parameters.WellPerformanceCurvesSimulation.PRODUCER)
+
+    if (source_node is None):
+       raise ValueError( "No producer node defined in parameters dictionary. A well or source context is required.")
+
+    from sixgill.core.get_or_create_operation import get_or_create_wc_sim_node
+    from sixgill.core.simulations import _set_wc_conditions
+    wc_sim = get_or_create_wc_sim_node(model, source_node, study_name)
+
+    parameters[Parameters.WellPerformanceCurvesSimulation.TASKNAME] = name
+    _set_wc_conditions(model, source_node, parameters, study_name)
+
+    return wc_sim
+
+
+def _create_gldiagnostics_sim_task(model, name, study_id, study_name, parameters, boundaries={}):
+    source_node = None
+    if not parameters:
+       raise ValueError( "No producer node defined in parameters dictionary. A well or source context is required.")
+
+    if (Parameters.GLDiagnosticsSimulation.PRODUCER in parameters):
+        source_node = parameters.pop(Parameters.GLDiagnosticsSimulation.PRODUCER)
+
+    if (source_node is None):
+       raise ValueError( "No producer node defined in parameters dictionary. A well or source context is required.")
+
+    from sixgill.core.get_or_create_operation import get_or_create_gldiagnostics_sim_node
+    from sixgill.core.simulations import  _set_gldiagnostics_conditions
+    gld_sim = get_or_create_gldiagnostics_sim_node(model, source_node, study_name)
+
+    parameters[Parameters.GLDiagnosticsSimulation.TASKNAME] = name
+    _set_gldiagnostics_conditions(model=model, producer=source_node, parameters=parameters,boundaries=boundaries, study=study_name)
+
+    return gld_sim
+
+
+def _generate_unique_name(model, model_component, well = None):
+    name = model_component + "_" + str(randint(1, 1000))
+    while not _is_name_unique(model, model_component, name, well):
+        name = model_component + "_" + str(randint(1, 1000))
+    return name
+
+def _load_catalog_data(model, node, parameters):
+    if parameters and Parameters.SharedPumpCatalogParameters.MANUFACTURER in parameters and \
+       Parameters.SharedPumpCatalogParameters.MODEL in parameters:
+        try:
+            _load_pump_catalog_internal(model, node,None)
+        except PipesimServerError as ex:
+            raise ValueError("Cannot load the catalog data for manufacturer {manufacturer} and model {model}".format(
+                           manufacturer = parameters[Parameters.SharedPumpCatalogParameters.MANUFACTURER],
+                           model = parameters[Parameters.SharedPumpCatalogParameters.MODEL]))
+
+
+def _load_pump_catalog(model, model_context : ModelContext):
+    nodeCatalog = model._catalog.filter(model_context)
+    for entry in nodeCatalog.all_entries:
+        if not entry.class_id in EQUIPMENT_WITH_CATALOG:
+            continue
+
+        node = entry.get_node()
+        loadFromCatalog = getattr(node, "_LoadFromCatalog", None)
+        if loadFromCatalog:
+            try:
+                _load_pump_catalog_internal(model, node, entry)
+            except PipesimServerError as ex:
+                raise ValueError("Cannot load data from catalog due to the following error: {}".format(ex.get_error_message()))
+
+def _load_pump_catalog_internal(model, node, entry):
+    node._LoadFromCatalog.post_loadfromcataloglink()
+    # we have to refresh the object factory cache for the node as
+    # manta does not know the changes we make on that node
+    model._session.object_factory._refresh(node)
+
+    if entry and entry.class_id == ModelClasses.FLOWCONTROLVALVE:
+        _fix_related_node_for_fcv(model, node)
+
+def _fix_related_node_for_fcv(model, node):
+    model._session.object_factory._refresh(node.ValveCatalogData)
+    newNodes = []
+    query = Query(model._session)
+    parentFilter = defaultdict(dict)
+    parentFilter["ValveCatalogData/@id"] = _get_link_id(node.ValveCatalogData.id)
+    valve_coeffcients = query.filter(cls_type=model.api.ValveCoefficient.cls_type_id, **parentFilter).fetch()
+    newNodes.extend(valve_coeffcients.members)
+    model._catalog.add_entries_for_nodes(newNodes)
+
+
+def _add_by_class_info(model, class_info: ModelComponentClassInfo, name: str, parameters={}):
+    """ """
+    newNodes = []
+    class_id = class_info.class_id
+    node = _add_new_node(model, class_info, name)
+    newNodes.append(node)
+
+    if class_id in POINT_SURFACE_EQUIPMENT:
+        locationNode = _add_surface_location_node(model)
+        node.Location = locationNode
+        newNodes.append(locationNode)
+        networkViewNode = _get_network_view_node(model._catalog)
+        itemViewNode = _add_new_node(model, ModelComponentClassInfo(class_id=ModelClasses.ITEMVIEW,
+                                                                    discriminant_property=None,
+                                                                    discriminant_value=None))
+        itemViewNode.AssociatedNode = node
+        itemViewNode.NetworkView = networkViewNode
+        newNodes.append(itemViewNode)
+
+
+    if class_id == ModelClasses.BLACKOILFLUID:
+        #Add calibration data
+        singlePointCalibration = _add_new_node(model,
+                                               ModelComponentClassInfo(class_id=ModelClasses.SINGLEPOINTCALIBRATION,
+                                                                       discriminant_property=None,
+                                                                       discriminant_value=None),
+                                               name=None)
+        node.CalibrationData = singlePointCalibration
+        newNodes.append(singlePointCalibration)
+        thermalData = _add_new_node(model,
+                                    ModelComponentClassInfo(class_id=ModelClasses.BLACKOILTHERMALDATA,
+                                                            discriminant_property=None,
+                                                            discriminant_value=None),
+                                    name=None)
+        node.ThermalData = thermalData
+        newNodes.append(thermalData)
+        emulsionData = _add_new_node(model,
+                                     ModelComponentClassInfo(class_id=ModelClasses.EMULSIONCOLLECTION,
+                                                             discriminant_property=None,
+                                                             discriminant_value=None),
+                                     name=None)
+        node.EmulsionData = emulsionData
+        newNodes.append(emulsionData)
+    elif class_id == ModelClasses.FLUIDCOMPONENT:
+        isUserDefined = True
+        flashPackage = model.fluids.compositional.pvt_package
+        if flashPackage == Constants.PVTPackage.E300 and name in E300_COMPONENT_DICT:
+            isUserDefined = False
+        elif flashPackage == Constants.PVTPackage.GERG and name in GERG_COMPONENT_DICT:
+            isUserDefined = False
+        elif flashPackage == Constants.PVTPackage.MULTIFLASH and name in MULTIFLASH_COMPONENT_DICT:
+            isUserDefined = False
+        node.IsUserDefined = isUserDefined
+        node.IsActive = True
+        node.Model = _get_web_api_model(model._catalog)
+    elif class_id == ModelClasses.COMPOSITIONALFLUID:
+        node.Model = _get_web_api_model(model._catalog)
+    elif class_id == ModelClasses.MFLFLUID:
+        node.Model = _get_web_api_model(model._catalog)
+    elif class_id == ModelClasses.PVTFLUID:
+        node.Model = _get_web_api_model(model._catalog)
+    elif class_id == ModelClasses.WELL:
+        node.WellOutletEquipment = node
+        subNodes = _get_new_borehole_and_well_strings(model._session, _get_link_id(node.id))
+        subNodes.append(subNodes[0].Trajectory)
+        newNodes.extend(subNodes)
+    elif class_id == ModelClasses.FLOWLINE:
+        pipe = node.Section
+        pipeHeatTransfer = node.Section.HeatTransfer
+        newNodes.extend([pipe, pipeHeatTransfer])
+    elif class_id == ModelClasses.FLOWCONTROLVALVE:
+        catalogData = _add_new_node(model,
+                                    ModelComponentClassInfo(class_id=ModelClasses.VALVECATALOGDATA,
+                                                             discriminant_property=None,
+                                                             discriminant_value=None),
+                                    name=None)
+        node.CatalogData = catalogData
+        newNodes.append(catalogData)
+    elif class_id == ModelClasses.PUMP:
+        catalogData = _add_new_node(model,
+                                    ModelComponentClassInfo(class_id=ModelClasses.PUMPCATALOGDATA,
+                                                             discriminant_property=None,
+                                                             discriminant_value=None),
+                                    name=None)
+        node.CatalogData = catalogData
+        newNodes.append(catalogData)
+    elif class_id == ModelClasses.FLOWCORRELATION:
+        newNodes.append(node.HorizontalFlowCorrelation)
+        newNodes.append(node.SinglePhaseFlowCorrelation)
+        newNodes.append(node.VerticalFlowCorrelation)
+
+    elif class_id == ModelClasses.COMPRESSOR:
+        catalogDataClass = ModelClasses.COMPRESSORCATALOGDATA
+        if Parameters.Compressor.ISRECIPROCATING in parameters and parameters[Parameters.Compressor.ISRECIPROCATING]:
+            catalogDataClass = ModelClasses.RECIPROCATINGCOMPRESSORCATALOGDATA
+        catalogData = _add_new_node(model,
+                                    ModelComponentClassInfo(class_id=catalogDataClass,
+                                                             discriminant_property=None,
+                                                             discriminant_value=None),
+                                    name=None)
+        node.CatalogData = catalogData
+        newNodes.append(catalogData)
+
+    _update_catalog(model, newNodes)
+
+    return node
+
+def _add_new_node(model: 'Model', class_info: ModelComponentClassInfo, name=None) -> object:
+    payload = {
+                SchemaNodes.TYPE: class_info.class_id,
+              }
+
+    if name:
+        payload[SchemaNodes.NAME] = name
+
+    if class_info.discriminant_property:
+        payload[class_info.discriminant_property] = class_info.discriminant_value
+
+    newNode = model._session.web_api.Node.post_node(payload)
+
+    return newNode
+
+def _set_node_parameters(model: 'Model', node: object, parameters: Optional[Dict[str, object]]) -> None:
+    """Set the specified parameters on the node via the model's set_value() method.
+    :param model: The model where the
+    :param node:
+    :param parameters:
+    """
+    if not parameters:
+        return
+
+    context = model._catalog.lookup_context_by_node(node)
+
+    if Parameters.Completion.IPRMODEL in parameters:
+        # Special case: we always want to set the IPR model *first*
+        model.set_value(parameter=Parameters.Completion.IPRMODEL,
+                        value=parameters[Parameters.Completion.IPRMODEL],
+                        **context)
+
+    if Parameters.MultiphaseBooster.TYPE in parameters:
+        # Special case: we always want to set the Booster Type *first*
+        model.set_value(parameter=Parameters.MultiphaseBooster.TYPE,
+                        value=parameters[Parameters.MultiphaseBooster.TYPE],
+                        **context)
+
+    if Parameters.Junction.TREATASSOURCE in parameters:
+        # Special case: we always want to set TREATASSOURCE *first*
+        model.set_value(parameter=Parameters.Junction.TREATASSOURCE,
+                        value=parameters[Parameters.Junction.TREATASSOURCE],
+                        **context)
+
+    # Now set all the other parameters...
+    for parameter, value in parameters.items():
+        if (parameter != Parameters.Completion.IPRMODEL and parameters != Parameters.MultiphaseBooster.TYPE
+            and parameter != Parameters.Junction.TREATASSOURCE):
+            model.set_value(parameter=parameter, value=value, **context)
+
+def _copy(context, new_name, model, catalog, session, use_template_well=False):
+
+    if model.find(Well=new_name):
+        raise ValueError("Well with name '{}' already exist in the model.".format(new_name))
+
+    if use_template_well:
+        context.pop(SyntheticContextElements.TEMPLATE)
+
+    if not context:
+        raise ContextError("No well with name '{}' exists in the model.".format(new_name))
+
+    node_id = get_node_id(catalog, context, ModelComponents.WELL)
+    search_results = []
+    search_results = _get_seach_results(node_id, session)
+
+    types_of_node_to_not_be_copied = {'metadata#BlackOilFluid_2017.1',
+                                      'metadata#BlackOilThermalData_2017.1',
+                                      'metadata#EmulsionCollection_2017.1',
+                                      'metadata#CompositionalFluid_2017.1',
+                                      'metadata#FluidComponentFraction_2017.1',
+                                      'metadata#FluidComponent_2017.1'}
+
+    for index, node in enumerate(search_results):
+        if node['@type'] in types_of_node_to_not_be_copied:
+            search_results.pop(index)
+        elif node['@type'] == 'metadata#WellHead_2017.1':
+            node['Name'] = new_name
+
+    payload = {'WithCreationReport': True}
+    payload['Template'] = search_results
+    template_response = session.web_api.Template.post_template(payload)
+    newNodes = []
+    itemViewNode = _add_new_node(model, ModelComponentClassInfo(class_id=ModelClasses.ITEMVIEW,
+                                                                    discriminant_property=None,
+                                                                    discriminant_value=None))
+    networkViewNode = _get_network_view_node(model._catalog)
+    itemViewNode.NetworkView = networkViewNode
+
+    for template_response_item in template_response.CreatedNodes:
+        created_node = template_response_item.CreatedNode
+        #if _get_link_id(created_node.type_id) in types_of_node_not_to_be_added_to_context:
+        #    continue
+        if hasattr(created_node,'Name') and created_node.Name == new_name:
+            itemViewNode.AssociatedNode = created_node
+        newNodes.append(created_node)
+    newNodes.append(itemViewNode)
+    _update_catalog(model, newNodes)
+
+
+def _get_seach_results(node_id, session):
+    query = session.web_api.SearchInput()
+    tmp = session.web_api.SearchWhereInput()
+    tmp.Property = '/' + SchemaNodes.ID
+    tmp.In = []
+    tmp.In.append(node_id)
+    query.Where = [tmp]
+    query.Select = ['/*']
+    query.RelatedNodes = session.web_api.RelatedNodesInput(Algorithm='AllRelated')
+
+    # Perform the search:
+    search_results = session.web_api.Search.post_search(query, raw_output=True)
+
+    #search_results = json.dumps()
+    #search_results = json.loads(search_results)
+    ##Probably changing it to use manta objects, will wait to see what to do
+    #search_results = str(search_results).replace('\'', '\"').replace('False', 'false').replace('True', 'true')
+    return search_results[SchemaNodes.MEMBERS]
+
+def get_node_id(catalog, context, model_component):
+    filtered_catalog = catalog.filter(context)
+
+    node_type = lookup_class_id_for_model_component(model_component, True).replace('#', '%23')
+
+    node_id = None
+
+    for id in filtered_catalog.all_node_ids:
+        if node_type not in id:
+            continue
+        elif node_id:
+            #print('more than one node with context id ' + node_id + ' ' + id)
+            #FIXME: Should we be just continuing here?
+            continue
+        node_id = id
+    return node_id
+
+def _get_link_id(id):
+    return id.split("/api/")[-1]
+
+def _update_catalog(model, newNodes):
+    model._catalog.add_entries_for_nodes(newNodes)
+
+def _get_network_view_node(catalog):
+    network_view_entry = catalog.lookup_entries_by_class_ids([ModelClasses.NETWORKVIEW])[0]
+    return catalog.get_node_by_id(network_view_entry.node_id)
+
+def _get_web_api_model(catalog):
+    model_entries = catalog.lookup_entries_by_class_ids([ModelClasses.MODEL])
+    if not model_entries:
+        raise ValueError( "Web API model is not retrieved properly.")
+    return catalog.get_node_by_id(model_entries[0].node_id)
+
+def _cleanup_pt_sim_sensitivity_values(session, sens_var_id):
+    query = Query(session)
+    sens_var_parameters = {"Variable/@id": sens_var_id}
+    result = query.filter(cls_type=ModelClasses.DOUBLEVALUE, **sens_var_parameters).fetch()
+    for v in result.members:
+        session.web_api.Node.delete_node(params=get_link_params(sens_var_id))
+
+
+def _get_new_borehole_and_well_strings(session, well_id):
+    """Get the newly created borehole and well strings that haven't been added to the catalog"""
+    query = Query(session)
+    well_parameters = {"WellHead/@id": well_id}
+    result = query.filter(cls_type=ModelClasses.BOREHOLE, **well_parameters).fetch()
+    borehole = result.members[0]
+
+    casing_string = None
+    tubing_string = None
+    borehole_parameters = {"Borehole/@id": _get_link_id(borehole.id)}
+    result = query.filter(cls_type=ModelClasses.WELLSTRING, **borehole_parameters).fetch()
+    for ws in result.members:
+        if ws.Name == "Casing 1":   #TODO: there should be a better way!
+            casing_string = ws
+        elif ws.Name == "Tubing":   #TODO: there should be a better way!
+            tubing_string = ws
+
+    return [borehole, casing_string, tubing_string]
+
+
+def _get_borehole_and_well_strings(catalog, well_id):
+    borehole_entry = catalog.lookup_entries_by_parent_id_and_class_id(well_id, ModelClasses.BOREHOLE)[0]
+    borehole = catalog.get_node_by_id(borehole_entry.node_id)
+    well_strings = [entry.get_node() for entry in catalog.lookup_entries_by_parent_id_and_class_id(borehole_entry.node_id, ModelClasses.WELLSTRING)]
+    for ws in well_strings:
+        if ws.Name == "Casing 1":   #TODO: there should be a better way!
+            casing_string = ws
+        elif ws.Name == "Tubing":   #TODO: there should be a better way!
+            tubing_string = ws
+
+    return [borehole, casing_string, tubing_string]
+
+
+def _is_name_unique(model: 'Model', model_component: str, name: str, well=None) -> bool:
+    if well:
+        ctx = {SchemaNodes.NAME: name, ModelComponents.WELL: well}
+    elif model_component == ModelComponents.STUDY:
+        ctx = {ModelComponents.STUDY: name, ModelComponents.WELL: NONE}
+    else:
+        ctx = {SchemaNodes.NAME: name, ModelComponents.WELL: NONE}
+
+    merged_context = compute_context(root_context=model.context,
+                                     context_keywords=ctx)
+
+    _logger.debug("_is_name_unique: merged context = {}".format(str(merged_context)))
+    return not model._catalog.are_any_entries_in_context(merged_context)
+
+
+def _add(model, component, name, context=None, parameters={}):
+
+    if component in TASK_MODEL_COMPONENTS:
+        #Study or operations
+        newNode = _add_study_or_sim_task_object(model, component, name, context, parameters)
+        return
+
+    class_type_id = lookup_class_id_for_model_component(component, False)
+    if(class_type_id is None):
+        raise ValueError( "Cannot find class type id for {}".format(component))
+
+    #surface equipment or fluids
+    well_entries = []
+    if context:    #for now, context is only used as well for downhole objects
+        well_entries = [x for x in model._catalog.lookup_entries_by_class_ids([ModelClasses.WELL]) if x.name == context]
+        if len(well_entries) == 0:
+            raise ContextError("Well {} does not exist in the model".format(context))
+
+    if len(well_entries) == 0:
+        #surface equipment or fluids
+        newNode = _add_fluid_or_surface_object(model, component, name, parameters)
+        return
+
+    #downhole objects
+    if not component in DOWNHOLE_MODEL_COMPONENTS:
+        raise ValueError( "{} is not a downhole component.".format(component))
+
+    if not parameters or \
+       not Parameters.DownholeLocation.TOPMEASUREDDEPTH in parameters or \
+       is_undefined(parameters[Parameters.DownholeLocation.TOPMEASUREDDEPTH]):
+        raise ValueError( "Adding downhole objects requires TopMeasuredDepth input parameter. Please specify it in parameters dictionary." )
+
+    top_measured_depth = parameters[Parameters.DownholeLocation.TOPMEASUREDDEPTH]
+
+    #downhole equipment
+    well_ids = [w.node_id for w in well_entries]
+
+    if len(well_ids) == 0:
+        raise ValueError("well {} does not exist in the model".format(context))
+
+    #print (well_ids)
+    if len(well_ids) > 1:
+        raise ValueError("multiple wells with name {} exist in the model".format(context))
+
+    subNodes = _get_borehole_and_well_strings(model._catalog, well_ids[0])
+    borehole = subNodes[0]
+    casing_string = subNodes[1]
+    tubing_string = subNodes[2]
+
+    tubingSections = [entry.get_node()
+                      for entry in model._catalog.lookup_entries_by_parent_id_and_class_id(_get_link_id(tubing_string.id), ModelClasses.TUBING)]
+    casingSections = [entry.get_node()
+                      for entry in model._catalog.lookup_entries_by_parent_id_and_class_id(_get_link_id(casing_string.id), ModelClasses.TUBING)]
+
+    if name is None:
+        name = _generate_unique_name(model, component, context)
+
+    if not _is_name_unique(model, component, name, context):
+        raise ValueError('The name {} already exists under well {}.'.format(name, context))
+
+    class_info = lookup_class_information_for_model_component(component, True)
+    new_nodes = []
+
+    if (component == ModelComponents.CASING) or\
+       (component == ModelComponents.LINER) or\
+       (component == ModelComponents.OPEN_HOLE):
+
+        if not Parameters.AbstractTubingSection.LENGTH in parameters or is_undefined(parameters[Parameters.AbstractTubingSection.LENGTH]):
+            raise ValueError( "Casing section requires both TopMeasuredDepth and Length input parameters. Please specify them in parameters dictionary.")
+
+        length = parameters[Parameters.AbstractTubingSection.LENGTH]
+        # check if this casing section can be added or not
+        (isOkToAdd, message) = _checkCasingSection(casingSections, top_measured_depth, length, class_info.discriminant_value)
+        if not isOkToAdd:
+           raise ValueError(message)
+
+        node = _add_new_node(model, class_info, name)
+        node.TopMeasuredDepth = top_measured_depth
+        node.Length = length
+        node.WellString = casing_string
+        new_nodes.append(node)
+
+        # CementTop value should be removed
+        if component == ModelComponents.LINER or component == ModelComponents.OPEN_HOLE:
+            node.CementTop = NAN
+
+    elif component == ModelComponents.TUBING:
+        if not Parameters.AbstractTubingSection.LENGTH in parameters or is_undefined(parameters[Parameters.AbstractTubingSection.LENGTH]):
+            raise ValueError( "Tubing section requires both TopMeasuredDepth and Length input parameters. Please specify them in parameters dictionary.")
+        #check if this tubing section can be added or not
+        length = parameters[Parameters.AbstractTubingSection.LENGTH]
+        (isOkToAdd, message) = _checkTubingSection(tubingSections, top_measured_depth, length)
+        if not isOkToAdd:
+            raise ValueError(message)
+
+        node = _add_new_node(model, class_info, name)
+        node.TopMeasuredDepth = top_measured_depth
+        node.Length = length
+        node.WellString = tubing_string
+        new_nodes.append(node)
+
+    # other downhole node. only packer and completion can associate with casing, others are all associated with tubing
+    elif component == ModelComponents.PACKER:
+        #find the casing section at the given depth to attach the equipment
+        casingSection = _find_tubing_section_at_depth(casingSections, top_measured_depth)
+        if casingSection is None:
+            raise ValueError("Could not find a casing to add the packer. Add a casing at depth {}".format(top_measured_depth))
+        node = _add_new_node(model, class_info, name)
+        node.WellString = casing_string
+        locationNode = _add_downhole_location_node(model)
+        locationNode.TopMeasuredDepth = top_measured_depth
+        node.Location = locationNode
+        new_nodes.extend([node, locationNode])
+
+    elif component == ModelComponents.COMPLETION:
+        casingSection = None
+        isDistributedCompletion = Parameters.Completion.FLUIDENTRYTYPE in parameters and \
+                                 parameters[Parameters.Completion.FLUIDENTRYTYPE] == Constants.CompletionFluidEntry.DISTRIBUTED
+        if isDistributedCompletion:
+            if not Parameters.DownholeLocation.BOTTOMMEASUREDDEPTH in parameters or is_undefined(parameters[Parameters.DownholeLocation.BOTTOMMEASUREDDEPTH]):
+                raise ValueError( "Distributed completion requires both TopMeasuredDepth and BottomMeasuredDepth input parameters. Please specify them in parameters dictionary.")
+            bottom_measured_depth = parameters[Parameters.DownholeLocation.BOTTOMMEASUREDDEPTH]
+            casingSection = _find_tubing_section_at_top_bottom_depth(casingSections, top_measured_depth, bottom_measured_depth)
+        else:
+            casingSection = _find_tubing_section_at_depth(casingSections, top_measured_depth)
+
+        if casingSection is None:
+            raise ValueError("Could not find a casing to add the completion. Add a casing at depth {}".format(top_measured_depth))
+
+        node = _add_new_node(model, class_info, name)
+        node.WellString = casing_string
+        new_nodes.append(node)
+        #Gravel is always there as part of the Completion.
+        new_nodes.append(node.Gravel)
+
+        # check that the IPR model is specified, set the default model if not:
+        if Parameters.Completion.IPRMODEL not in parameters:
+            # the default is IPRPIModel
+            parameters[Parameters.Completion.IPRModel] = ModelClasses.IPRPIMODEL
+
+        locationNode = _add_downhole_location_node(model)
+        locationNode.TopMeasuredDepth = top_measured_depth
+        if isDistributedCompletion:
+            bottom_measured_depth = parameters[Parameters.DownholeLocation.BOTTOMMEASUREDDEPTH]
+            locationNode.BottomMeasuredDepth = bottom_measured_depth
+
+        node.Location = locationNode
+        new_nodes.append(locationNode)
+
+    elif component == ModelComponents.CHOKE or \
+         component == ModelComponents.SINGLEPHASESEPARATOR or \
+         component == ModelComponents.SUBSURFACESAFETYVALVE or \
+         component == ModelComponents.TUBINGPLUG or \
+         component == ModelComponents.ENGINEKEYWORDS or \
+         component == ModelComponents.GASLIFTINJECTION or \
+         component == ModelComponents.ESP or \
+         component == ModelComponents.PCP or \
+         component == ModelComponents.RODPUMP or \
+         component == ModelComponents.INJECTOR or \
+         component == ModelComponents.SLIDINGSLEEVE or \
+         component == ModelComponents.FLOWCONTROLVALVE or \
+         component == ModelComponents.SPOTREPORT:
+        # find the tubing section at the given depth to attach the equipment
+        tubingSection = _find_tubing_section_at_depth(tubingSections, top_measured_depth)
+        if tubingSection is None:
+           raise ValueError("Could not find a tubing at {depth} to add the {equip}.".format(equip=component, depth=top_measured_depth))
+        class_info = lookup_class_information_for_model_component(component, True)
+        node = _add_new_node(model, class_info, name)
+        node.WellString = tubing_string
+
+        if component == ModelComponents.FLOWCONTROLVALVE:
+            (is_advancewell,message) = _check_welltype_isadvanced(tubing_string)
+            if not is_advancewell:
+                raise ValueError(message)
+
+        if component == ModelComponents.CHOKE or component == ModelComponents.ENGINEKEYWORDS or component == ModelComponents.INJECTOR or component == ModelComponents.SPOTREPORT:
+           node.Network = None
+
+        locationNode = _add_downhole_location_node(model)
+        locationNode.TopMeasuredDepth = top_measured_depth
+        node.Location = locationNode
+        new_nodes.extend([node,locationNode])
+
+    if len(new_nodes) == 0:
+        raise ValueError("Downhole component {param} is not supported".format(param=component))
+
+    # Add the Motor and cable catalog nodes
+    if component == ModelComponents.ESP:
+        _add_esp_motor_and_cable_nodes(model, node, new_nodes)
+
+    if component == ModelComponents.FLOWCONTROLVALVE and _need_load_valveCatalog(parameters):
+        _add_fcv_catalog_nodes(model, node, new_nodes)
+
+    _update_catalog(model, new_nodes)
+
+    #Special handling for setting the motor coefficient values
+    if component == ModelComponents.ESP:
+        context = model._catalog.lookup_context_by_node(node)
+        model._set_esp_motor_coefficients(context, parameters)
+
+    _set_node_parameters(model, node, parameters)
+
+    if component == ModelComponents.ESP or component == ModelComponents.PCP or (component == ModelComponents.FLOWCONTROLVALVE and _need_load_valveCatalog(parameters)):
+        _load_catalog_data(model, node, parameters)
+
+    #VOGEL has to be ISOCHRONAL.
+    if component == ModelComponents.COMPLETION and Parameters.Completion.IPRMODEL in parameters and context is not None and name is not None:
+        if parameters["IPRModel"] == Constants.IPRModels.IPRVOGEL:
+                localcontext = context+":" + name
+                model.set_value(context=localcontext, parameter=Parameters.FluidLink.COMPLETIONTESTTYPE, value=Constants.CompletionTestType.ISOCHRONAL)
+
+def _need_load_valveCatalog(parameters: Optional[Dict[str, object]]):
+        return (Parameters.FlowControlValve.USEGENERICMODE in parameters) and \
+            (parameters[Parameters.FlowControlValve.USEGENERICMODE] == False) and \
+            (Parameters.FlowControlValve.ValveCatalogData.MANUFACTURER in parameters) and \
+            (Parameters.FlowControlValve.ValveCatalogData.MODEL in parameters)
+
+def _add_esp_motor_and_cable_nodes(model, esp_node, new_nodes):
+    new_nodes.extend([esp_node.ESPMotorCatalogData, esp_node.CableCatalogData])
+    #Find the ESPMotorCoefficients for the motor
+    query1 = Query(model._session)
+    parentFilter = defaultdict(dict)
+    motor_id = _get_link_id(esp_node.ESPMotorCatalogData.id)
+    parentFilter["ESPMotorCatalogData/@id"] = motor_id
+    motor_coefficients = query1.filter(cls_type=model.api.ESPMotorCoefficient.cls_type_id, **parentFilter).fetch()
+    new_nodes.extend(motor_coefficients.members)
+
+def _add_fcv_catalog_nodes(model, fcv_node, new_nodes):
+    new_nodes.extend([fcv_node.ValveCatalogData])
+    query1 = Query(model._session)
+    parentFilter = defaultdict(dict)
+    valveCatalogData_id = _get_link_id(fcv_node.ValveCatalogData.id)
+    parentFilter["ValveCatalogData/@id"] = valveCatalogData_id
+    valve_coefficients = query1.filter(cls_type=model.api.ValveCoefficient.cls_type_id, **parentFilter).fetch()
+    new_nodes.extend(valve_coefficients.members)
+
+def _add_downhole_location_node(model):
+    locationNode = _add_new_node(model, ModelComponentClassInfo(class_id=ModelClasses.DOWNHOLELOCATION,
+                                                                discriminant_property=None,
+                                                                discriminant_value=None))
+    return locationNode
+
+def _add_surface_location_node(model):
+    locationNode = _add_new_node(model, ModelComponentClassInfo(class_id=ModelClasses.SURFACELOCATION,
+                                                                discriminant_property=None,
+                                                                discriminant_value=None))
+    return locationNode
+
+def _checkCasingSection(casingSections, top_measured_depth, length, casingType):
+    if is_Nan_or_None(top_measured_depth, length):
+        return (False, "Casing requires both top_measured_depth and length input parameters")
+    #TODO: check if a casing can be added at the given depths
+    return (True, None)
+
+def _checkTubingSection(tubingSections, top_measured_depth, length):
+    if is_Nan_or_None(top_measured_depth, length):
+        return (False, "Tubing requires both top_measured_depth and length input parameters")
+    #TODO: check if a tubing can be added at the given depths
+    return (True, None)
+
+def _find_tubing_section_at_depth(tubing_sections, md):
+    for ts in tubing_sections:
+        if is_lessthan_or_equal(ts.TopMeasuredDepth, md) and \
+           is_greaterthan_or_equal(ts.TopMeasuredDepth + ts.Length, md):
+            return ts
+    return None
+
+def _find_tubing_section_at_top_bottom_depth(tubing_sections, top_md, bottom_md):
+    for ts in tubing_sections:
+        if ts.TopMeasuredDepth <= top_md and ts.TopMeasuredDepth + ts.Length >= bottom_md:
+            return ts
+    return None
+
+def _check_welltype_isadvanced(tubing_string):
+    try:
+        welltype =tubing_string.Borehole.WellHead.WellType
+        if(welltype !='Advanced'):
+            return (False, "Flow control valve can only be added in advanced well model.")
+        return (True, None)
+    except ValueError as ex:
+        return (True, None)
+
+
+
+
+Trying to import module...
+
+Module attributes:
+
+ALL:
+Type: <class 'str'>
+Value: ___ALL___
+
+CLASSES_TO_MODEL_COMPONENTS_DICT:
+Type: <class 'dict'>
+Value: {'metadata#BlackOilFluid_2017.1': 'BlackOilFluid', 'metadata#BoundaryPair_2017.1': 'Boundary', 'metadata#TubingSection_2017.1': 'Tubing', 'metadata#CheckValve_2017.1': 'CheckValve', 'metadata#Choke_2017.1': 'Choke', 'metadata#Perforation_2017.1': 'Completion', 'metadata#CompletionConingPoint_2017.1': 'CompletionConingPoint', 'metadata#CompletionModel_2017.1': 'CompletionModel', 'metadata#CompositionalFluid_2017.1': 'CompositionalFluid', 'metadata#Compressor_2017.1': 'Compressor', 'metadata#EngineKeywords_2017.1': 'EngineKeywords', 'metadata#ESP_2017.1': 'ESP', 'metadata#Expander_2017.1': 'Expander', 'metadata#FileBasedFluid_2017.1': 'FileBasedFluid', 'metadata#FlowControlValve_2017.1': 'FlowControlValve', 'metadata#FlowCorrelation_2017.1': 'FlowCorrelation', 'metadata#Flowline_2017.1': 'Flowline', 'metadata#FluidComponent_2017.1': 'FluidComponent', 'metadata#GasLiftInjection_2017.1': 'GasLiftInjection', 'metadata#GenericBoosterParameterBag_2017.1': 'GenericBooster', 'metadata#GenericEquipment_2017.1': 'GenericEquipment', 'metadata#GLDiagnosticsOperation_2017.1': 'GLDiagnosticsOp', 'metadata#GlobalCatalog_2017.1': 'GlobalCatalog', 'metadata#GravelPack_2017.1': 'GravelPack', 'metadata#HeatExchanger_2017.1': 'HeatExchanger', 'metadata#HeatTransferOptions_2017.1': 'HeatTransferOptions', 'metadata#Injector_2017.1': 'Injector', 'metadata#BackPressureCompletionModel_2017.1': 'IPRBackPressure', 'metadata#DarcyCompletionModel_2017.1': 'IPRDarcy', 'metadata#FetkovitchEquationModel_2017.1': 'IPRFetkovitch', 'metadata#ForchheimerCompletionModel_2017.1': 'IPRForchheimer', 'metadata#DistributedCompletionModel_2017.1': 'IPRSSJoshi', 'metadata#HydraulicFractureCompletionModel_2017.1': 'IPRHydraulicFracture', 'metadata#JonesCompletionModel_2017.1': 'IPRJones', 'metadata#PIModel_2017.1': 'IPRPIModel', 'metadata#TrilinearTransientModel_2019.1': 'IPRTriLinear', 'metadata#VogelModel_2017.1': 'IPRVogel', 'metadata#Junction_2017.1': 'Junction', 'metadata#MeasurementPoint_2017.1': 'MeasurementPoint', 'metadata#MFLFluid_2017.1': 'MFLFluid', 'metadata#MultiphaseBooster_2017.1': 'MultiphaseBooster', 'metadata#MultiplierAdder_2017.1': 'MultiplierAdder', 'metadata#WellOptimizerOperation_2018.1': 'NetworkOptSim', 'metadata#NetworkSimOperation_2017.1': 'NetworkSim', 'metadata#NodalAnalysisOperation_2017.1': 'NodalAnalysisOp', 'metadata#OneSubseaBoosterParameterBag_2017.1': 'OneSubseaBooster', 'metadata#Packer_2017.1': 'Packer', 'metadata#PCP_2017.1': 'PCP', 'metadata#PressureTempProfileOperation_2017.1': 'PTProfileSim', 'metadata#GenericPump_2017.1': 'Pump', 'metadata#PVTFluid_2017.1': 'PVTFluid', 'metadata#RiskIndexLimits_2020.1': 'RiskIndexLimits', 'metadata#RodPump_2017.1': 'RodPump', 'metadata#SinglephaseSeparator_2017.1': 'SinglephaseSeparator', 'metadata#Sink_2017.1': 'Sink', 'metadata#SlidingSleeve_2017.1': 'SlidingSleeve', 'metadata#Source_2017.1': 'Source', 'metadata#SpotReport_2018.1': 'SpotReport', 'metadata#Study_2017.1': 'Study', 'metadata#SSSV_2017.1': 'SubsurfaceSafetyValve', 'metadata#SystemAnalysisOperation_2017.1': 'SystemAnalysisOp', 'metadata#ThreePhaseSeparator_2017.1': 'ThreePhaseSeparator', 'metadata#TubingPlug_2017.1': 'TubingPlug', 'metadata#TwoPhaseSeparator_2017.1': 'TwoPhaseSeparator', 'metadata#VFPTablesOperation_2017.1': 'VfpTablesOp', 'metadata#WaterTempVelocitySurvey_2017.1': 'WaterTempVelocitySurvey', 'metadata#WellHead_2017.1': 'Well', 'metadata#WellCurvesOperation_2018.1': 'WellPerformanceCurvesSim', 'metadata#OneSubseaWetGasCompressorParameterBag_2017.2': 'WetGasCompressor'}
+
+Constants:
+Type: <class 'type'>
+Value: <class 'sixgill.definitions.Constants'>
+
+ContextError:
+Type: <class 'type'>
+Value: <class 'sixgill.core.model_context.ContextError'>
+
+DOWNHOLE_MODEL_COMPONENTS:
+Type: <class 'set'>
+Value: {'Tubing', 'SlidingSleeve', 'Injector', 'EngineKeywords', 'OpenHole', 'ESP', 'SpotReport', 'TubingPlug', 'Completion', 'Packer', 'SubsurfaceSafetyValve', 'RodPump', 'FlowControlValve', 'Choke', 'PCP', 'GasLiftInjection', 'SinglephaseSeparator', 'Liner', 'Casing'}
+
+Dict:
+Type: <class 'typing._SpecialGenericAlias'>
+Value: typing.Dict
+
+DistributedCompletionModel:
+Type: <class 'type'>
+Value: <class 'sixgill.core.resources.DistributedCompletionModel'>
+
+E300_COMPONENT_DICT:
+Type: <class 'dict'>
+Value: {'BEN': 'BEN', 'C1': 'C1', 'C10': 'C10', 'C11': 'C11', 'C12': 'C12', 'C13': 'C13', 'C14': 'C14', 'C15': 'C15', 'C16': 'C16', 'C17': 'C17', 'C18': 'C18', 'C19': 'C19', 'C2': 'C2', 'C20': 'C20', 'C21': 'C21', 'C22': 'C22', 'C23': 'C23', 'C24': 'C24', 'C25': 'C25', 'C26': 'C26', 'C27': 'C27', 'C28': 'C28', 'C29': 'C29', 'C3': 'C3', 'C30': 'C30', 'C31': 'C31', 'C32': 'C32', 'C33': 'C33', 'C34': 'C34', 'C35': 'C35', 'C36': 'C36', 'C37': 'C37', 'C38': 'C38', 'C39': 'C39', 'C4': 'C4', 'C40': 'C40', 'C41': 'C41', 'C42': 'C42', 'C43': 'C43', 'C44': 'C44', 'C45': 'C45', 'C5': 'C5', 'C6': 'C6', 'C7': 'C7', 'C8': 'C8', 'C9': 'C9', 'CO': 'CO', 'CO2': 'CO2', 'CycloC6': 'CYCLOC6', 'Ethylbenzene': 'ETHYLBENZENE', 'H2': 'H2', 'H2O': 'H2O', 'H2S': 'H2S', 'IC4': 'IC4', 'IC5': 'IC5', 'McycloC5': 'MCYCLOC5', 'McycloC6': 'MCYCLOC6', 'MPXylene': 'MPXYLENE', 'N2': 'N2', 'NC4': 'NC4', 'NC5': 'NC5', 'OXylene': 'OXYLENE', 'TOL': 'TOL'}
+
+EQUIPMENT_WITH_CATALOG:
+Type: <class 'set'>
+Value: {'metadata#PCP_2017.1', 'metadata#GenericPump_2017.1', 'metadata#Compressor_2017.1', 'metadata#FlowControlValve_2017.1', 'metadata#ESP_2017.1'}
+
+FLUID_MODEL_COMPONENTS:
+Type: <class 'set'>
+Value: {'MFLFluid', 'PVTFluid', 'CompositionalFluid', 'FluidComponent', 'BlackOilFluid'}
+
+GERG_COMPONENT_DICT:
+Type: <class 'dict'>
+Value: {'Argon': 'ARGON', 'Carbon dioxide': 'CARBON_DIOXIDE', 'Carbon monoxide': 'CARBON_MONOXIDE', 'Ethane': 'ETHANE', 'Helium': 'HELIUM', 'Hydrogen': 'HYDROGEN', 'Hydrogen sulphide': 'HYDROGEN_SULPHIDE', 'Isobutane': 'ISOBUTANE', 'Isopentane': 'ISOPENTANE', 'Methane': 'METHANE', 'Nitrogen': 'NITROGEN', 'n-Butane': 'N_BUTANE', 'n-Decane': 'N_DECANE', 'n-Heptane': 'N_HEPTANE', 'n-Hexane': 'N_HEXANE', 'n-Nonane': 'N_NONANE', 'n-Octane': 'N_OCTANE', 'n-Pentane': 'N_PENTANE', 'Oxygen': 'OXYGEN', 'Propane': 'PROPANE', 'Water': 'WATER'}
+
+Iterable:
+Type: <class 'typing._SpecialGenericAlias'>
+Value: typing.Iterable
+
+MODEL_CLASS_DICT:
+Type: <class 'dict'>
+Value: {'ARRAYDIMENSION': 'metadata#ArrayDimension_2017.1', 'BASECATALOGPUMPDATA': 'metadata#BaseCatalogPumpData_2017.1', 'BASEVARIABLE': 'metadata#BaseVariable_2017.1', 'BASICDEVIATIONSURVEY': 'metadata#BasicDeviationSurvey_2017.1', 'BLACKOILCALIBRATION': 'metadata#BlackOilCalibration_2017.1', 'BLACKOILFLUID': 'metadata#BlackOilFluid_2017.1', 'BLACKOILTHERMALDATA': 'metadata#BlackOilThermalData_2017.1', 'BOOLOPTION': 'metadata#BoolOption_2017.1', 'BOOSTERPARAMETERBAG': 'metadata#BoosterParameterBag_2017.1', 'BOREHOLE': 'metadata#Borehole_2017.1', 'BOUNDARY': 'metadata#BoundaryPair_2017.1', 'BOUNDARYNODE': 'metadata#BoundaryNode_2017.1', 'CABLECATALOGDATA': 'metadata#CableCatalogData_2020.1', 'CALCULATIONVARIABLE': 'metadata#CalculationVariable_2017.1', 'CALIBRATIONCOLLECTION': 'metadata#CalibrationCollection_2017.1', 'CALIBRATIONPOINT': 'metadata#CalibrationPoint_2017.1', 'CASING': 'metadata#TubingSection_2017.1', 'CATALOGVERSION': 'metadata#CatalogVersion_2017.1', 'CHECKVALVE': 'metadata#CheckValve_2017.1', 'CHOKE': 'metadata#Choke_2017.1', 'COATINGHEATTRANSFER': 'metadata#CoatingHeatTransfer_2017.1', 'COMPLETION': 'metadata#Perforation_2017.1', 'COMPLETIONCONINGPOINT': 'metadata#CompletionConingPoint_2017.1', 'COMPLETIONMODEL': 'metadata#CompletionModel_2017.1', 'COMPLETIONTESTPOINT': 'metadata#CompletionTestPoint_2017.1', 'COMPOSITIONALFLUID': 'metadata#CompositionalFluid_2017.1', 'COMPOSITIONALFLUIDTUNINGOPERATION': 'metadata#CompositionalFluidTuningOperation_2017.1', 'COMPRESSOR': 'metadata#Compressor_2017.1', 'COMPRESSORCATALOGDATA': 'metadata#CompressorCatalogData_2017.1', 'COMPRESSORCURVEDATA': 'metadata#CompressorCurveData_2017.1', 'CURVEDATA': 'metadata#CurveData_2017.1', 'DATACOMPARISONOPERATION': 'metadata#DataComparisonOperation_2017.1', 'DATAMATCHINGOPERATION': 'metadata#DataMatchingOperation_2017.1', 'DEFAULTOPTION': 'metadata#DefaultOption_2017.1', 'DETAILEDGEOGRAPHICSURVEY': 'metadata#DetailedGeographicSurvey_2017.1', 'DEVIATIONSURVEY': 'metadata#DeviationSurvey_2017.1', 'DISTRIBUTEDCOMPLETIONMODEL': 'metadata#DistributedCompletionModel_2017.1', 'DOUBLEOPTION': 'metadata#DoubleOption_2017.1', 'DOUBLEOPTIONBASE': 'metadata#DoubleOptionBase_2017.1', 'DOUBLEVALUE': 'metadata#DoubleValue_2017.1', 'DOWNHOLELOCATION': 'metadata#DownholeLocation_2017.1', 'EMULSIONCOLLECTION': 'metadata#EmulsionCollection_2017.1', 'EMULSIONPOINT': 'metadata#EmulsionPoint_2017.1', 'ENGINEKEYWORDS': 'metadata#EngineKeywords_2017.1', 'EQUIPMENT': 'metadata#Equipment_2017.1', 'EQUIPMENTLOCATION': 'metadata#EquipmentLocation_2017.1', 'ESP': 'metadata#ESP_2017.1', 'ESPCATALOGDATA': 'metadata#ESPCatalogData_2017.1', 'ESPCOEFFICIENT': 'metadata#ESPCoefficient_2017.1', 'ESPDESIGNOPERATION': 'metadata#ESPDesignOperation_2017.1', 'ESPMOTORCATALOGDATA': 'metadata#ESPMotorCatalogData_2020.1', 'ESPMOTORCOEFFICIENT': 'metadata#ESPMotorCoefficient_2020.1', 'EXPANDER': 'metadata#Expander_2017.1', 'FILEBASEDFLUID': 'metadata#FileBasedFluid_2017.1', 'FLOWCONTROLVALVE': 'metadata#FlowControlValve_2017.1', 'FLOWCORRELATION': 'metadata#FlowCorrelation_2017.1', 'FLOWLINE': 'metadata#Flowline_2017.1', 'FLUID': 'metadata#Fluid_2017.1', 'FLUIDBINARYCOEFFICIENT': 'metadata#FluidBinaryCoefficient_2017.1', 'FLUIDCOMPONENT': 'metadata#FluidComponent_2017.1', 'FLUIDFLASHOPERATION': 'metadata#FluidFlashOperation_2017.1', 'FLUIDLINK': 'metadata#FluidLink_2017.1', 'FOLDERVIEW': 'metadata#FolderView_2017.1', 'GASLIFTINJECTION': 'metadata#GasLiftInjection_2017.1', 'GAUGE': 'metadata#Gauge_2017.1', 'GENERICBOOSTER': 'metadata#GenericBoosterParameterBag_2017.1', 'GENERICEQUIPMENT': 'metadata#GenericEquipment_2017.1', 'GEOGRAPHICSURVEY': 'metadata#GeographicSurvey_2017.1', 'GISELEVATIONSETTINGS': 'metadata#GISElevationSettings_2017.1', 'GISLAYERPROPERTY': 'metadata#GISLayerProperty_2017.1', 'GISSETTINGS': 'metadata#GISSettings_2017.1', 'GLDESIGNOPERATION': 'metadata#GLDesignOperation_2017.1', 'GLDIAGNOSTICSOPERATION': 'metadata#GLDiagnosticsOperation_2017.1', 'GLDIPOPERATION': 'metadata#GLDipOperation_2017.1', 'GLOBALCATALOG': 'metadata#GlobalCatalog_2017.1', 'GLRESPONSEOPERATION': 'metadata#GLResponseOperation_2017.1', 'GRAVELPACK': 'metadata#GravelPack_2017.1', 'HEATEXCHANGER': 'metadata#HeatExchanger_2017.1', 'HEATTRANSFEROPTIONS': 'metadata#HeatTransferOptions_2017.1', 'INJECTOR': 'metadata#Injector_2017.1', 'INTEGEROPTION': 'metadata#IntegerOption_2017.1', 'INVOLVEDENTITY': 'metadata#InvolvedEntity_2017.1', 'IPRBACKPRESSURE': 'metadata#BackPressureCompletionModel_2017.1', 'IPRDARCY': 'metadata#DarcyCompletionModel_2017.1', 'IPRFETKOVITCH': 'metadata#FetkovitchEquationModel_2017.1', 'IPRFORCHHEIMER': 'metadata#ForchheimerCompletionModel_2017.1', 'IPRHORIZONTALPI': 'metadata#DistributedCompletionModel_2017.1', 'IPRHYDRAULICFRACTURE': 'metadata#HydraulicFractureCompletionModel_2017.1', 'IPRJONES': 'metadata#JonesCompletionModel_2017.1', 'IPRPIMODEL': 'metadata#PIModel_2017.1', 'IPRPSSBABUODEH': 'metadata#DistributedCompletionModel_2017.1', 'IPRSSJOSHI': 'metadata#DistributedCompletionModel_2017.1', 'IPRTRILINEAR': 'metadata#TrilinearTransientModel_2019.1', 'IPRVOGEL': 'metadata#VogelModel_2017.1', 'ITEMVIEW': 'metadata#ItemView_2017.1', 'JUNCTION': 'metadata#Junction_2017.1', 'LINER': 'metadata#TubingSection_2017.1', 'LOCALCONSTRAINT': 'metadata#LocalConstraintItem_2018.1', 'MEASUREDDATAPOINT': 'metadata#MeasuredDataPoint_2017.1', 'MEASUREMENTPOINT': 'metadata#MeasurementPoint_2017.1', 'MFLFLUID': 'metadata#MFLFluid_2017.1', 'MODEL': 'metadata#Model_2017.1', 'MODELCALIBRATIONOPERATION': 'metadata#ModelCalibrationOperation_2017.1', 'MODELITEM': 'metadata#ModelItem_2017.1', 'MODELPROPERTY': 'metadata#ModelProperty_2017.1', 'MULTIPHASEBOOSTER': 'metadata#MultiphaseBooster_2017.1', 'MULTIPHASEFLOWCORRELATION': 'metadata#MultiPhaseFlowCorrelation_2017.1', 'MULTIPLIERADDER': 'metadata#MultiplierAdder_2017.1', 'MULTIPOINTCALIBRATION': 'metadata#MultiPointCalibration_2017.1', 'MULTIPOINTIPRMODEL': 'metadata#MultiPointIPRModel_2017.1', 'NAMEDITEM': 'metadata#NamedItem_2017.1', 'NETWORK': 'metadata#Network_2017.1', 'NETWORKDIAGRAMLAYERPROPERTY': 'metadata#NetworkDiagramLayerProperty_2017.1', 'NETWORKOPTIMIZERSIMULATION': 'metadata#WellOptimizerOperation_2018.1', 'NETWORKSIMULATION': 'metadata#NetworkSimOperation_2017.1', 'NETWORKVIEW': 'metadata#NetworkView_2017.1', 'NODALANALYSISLIMITS': 'metadata#NodalAnalysisLimits_2017.1', 'NODALANALYSISOPERATION': 'metadata#NodalAnalysisOperation_2017.1', 'NODALMEASUREMENTPOINT': 'metadata#NodalMeasurementPoint_2017.1', 'ONESUBSEABOOSTER': 'metadata#OneSubseaBoosterParameterBag_2017.1', 'OPEN_HOLE': 'metadata#TubingSection_2017.1', 'OPERATION': 'metadata#Operation_2017.1', 'OPTION': 'metadata#Option_2017.1', 'OPTIONCOLLECTION': 'metadata#OptionCollection_2017.1', 'PACKER': 'metadata#Packer_2017.1', 'PCP': 'metadata#PCP_2017.1', 'PCPCATALOGDATA': 'metadata#PCPCatalogData_2017.1', 'PERFORATIONANALYSISOPERATION': 'metadata#PerforationAnalysisOperation_2017.1', 'PERFORATIONGUN': 'metadata#PerforationGun_2017.1', 'PIPE': 'metadata#Pipe_2017.1', 'PIPEBASE': 'metadata#PipeBase_2017.1', 'PIPEHEATTRANSFER': 'metadata#PipeHeatTransfer_2017.1', 'POSITIONEDTUBINGSECTION': 'metadata#PositionedTubingSection_2017.1', 'PQCURVE': 'metadata#PQCurve_2017.1', 'PQDATA': 'metadata#PQData_2017.1', 'PTPROFILESIMULATION': 'metadata#PressureTempProfileOperation_2017.1', 'PUMP': 'metadata#GenericPump_2017.1', 'PUMPCATALOGDATA': 'metadata#GenericPumpCatalogData_2017.1', 'PVTFLUID': 'metadata#PVTFluid_2017.1', 'RANGE': 'metadata#Range_2017.1', 'RATECONSTRAINTITEM': 'metadata#RateConstraintItem_2017.1', 'RECIPROCATINGCOMPRESSORCATALOGDATA': 'metadata#ReciprocatingCompressorCatalogData_2017.1', 'RECIPROCATINGCOMPRESSORCURVEDATA': 'metadata#ReciprocatingCompressorCurveData_2017.1', 'RECIPROCATINGCOMPRESSORCURVEDATAITEM': 'metadata#ReciprocatingCompressorCurveDataItem_2017.1', 'RELATIVEPERMEABILITYPOINT': 'metadata#RelativePermeabilityPoint_2017.1', 'RESULT': 'metadata#Result_2017.1', 'RISKINDEXLIMITS': 'metadata#RiskIndexLimits_2020.1', 'RODPUMP': 'metadata#RodPump_2017.1', 'SENSITIVITYVARIABLE': 'metadata#SensitivityVariable_2017.1', 'SIMPLEGEOGRAPHICSURVEY': 'metadata#SimpleGeographicSurvey_2017.1', 'SINGLEBRANCHOPERATION': 'metadata#SingleBranchOperation_2017.1', 'SINGLEPHASEFLOWCORRELATION': 'metadata#SinglePhaseFlowCorrelation_2017.1', 'SINGLEPHASESEPARATOR': 'metadata#SinglephaseSeparator_2017.1', 'SINGLEPOINTCALIBRATION': 'metadata#SinglePointCalibration_2017.1', 'SINK': 'metadata#Sink_2017.1', 'SLIDINGSLEEVE': 'metadata#SlidingSleeve_2017.1', 'SOURCE': 'metadata#Source_2017.1', 'SPECIALSENSOBJECT': 'metadata#SpecialSensObject_2017.1', 'SPOTREPORT': 'metadata#SpotReport_2018.1', 'STEAMFLUID': 'metadata#SteamFluid_2017.1', 'STRINGOPTION': 'metadata#StringOption_2017.1', 'STUDY': 'metadata#Study_2017.1', 'SUBSURFACESAFETYVALVE': 'metadata#SSSV_2017.1', 'SURFACELOCATION': 'metadata#SurfaceLocation_2017.1', 'SYSTEMANALYSISOPERATION': 'metadata#SystemAnalysisOperation_2017.1', 'TASK': 'metadata#TaskExecution_2017.1', 'THREEPHASESEPARATOR': 'metadata#ThreePhaseSeparator_2017.1', 'TUBING': 'metadata#TubingSection_2017.1', 'TUBINGPLUG': 'metadata#TubingPlug_2017.1', 'TWOPHASESEPARATOR': 'metadata#TwoPhaseSeparator_2017.1', 'UNITSET': 'metadata#UnitSet_2017.1', 'UNITSETELEMENT': 'metadata#UnitSetElement_2017.1', 'USEREQUIPMENT': 'metadata#UserEquipment_2017.1', 'USERPROFILE': 'metadata#UserProfile_2017.1', 'VALVECATALOGDATA': 'metadata#ValveCatalogData_2023.1', 'VALVECOEFFICIENT': 'metadata#ValveCoefficient_2023.1', 'VFPTABLESOPERATION': 'metadata#VFPTablesOperation_2017.1', 'VISCOSITYPOINT': 'metadata#ViscosityPoint_2017.1', 'WATERTEMPVELOCITYSURVEY': 'metadata#WaterTempVelocitySurvey_2017.1', 'WATERTEMPVELOCITYSURVEYPOINT': 'metadata#WaterTempVelocitySurveyPoint_2017.1', 'WELL': 'metadata#WellHead_2017.1', 'WELLPERFORMANCECURVESOPERATION': 'metadata#WellCurvesOperation_2018.1', 'WELLSTRING': 'metadata#WellString_2017.1', 'WELLTRAJECTORY': 'metadata#WellTrajectory_2017.1', 'WETGASCOMPRESSOR': 'metadata#OneSubseaWetGasCompressorParameterBag_2017.2', 'WORKSPACEDATAROOT': 'metadata#WorkspaceDataRoot_2017.1', 'ZONE': 'metadata#Zone_2017.1', 'ZONELINK': 'metadata#ZoneLink_2017.1'}
+
+MODEL_COMPONENTS_TO_CLASSES_DICT:
+Type: <class 'dict'>
+Value: {'BlackOilFluid': 'metadata#BlackOilFluid_2017.1', 'Boundary': 'metadata#BoundaryPair_2017.1', 'Casing': 'metadata#TubingSection_2017.1', 'CheckValve': 'metadata#CheckValve_2017.1', 'Choke': 'metadata#Choke_2017.1', 'Completion': 'metadata#Perforation_2017.1', 'CompletionConingPoint': 'metadata#CompletionConingPoint_2017.1', 'CompletionModel': 'metadata#CompletionModel_2017.1', 'CompositionalFluid': 'metadata#CompositionalFluid_2017.1', 'Compressor': 'metadata#Compressor_2017.1', 'EngineKeywords': 'metadata#EngineKeywords_2017.1', 'ESP': 'metadata#ESP_2017.1', 'Expander': 'metadata#Expander_2017.1', 'FileBasedFluid': 'metadata#FileBasedFluid_2017.1', 'FlowControlValve': 'metadata#FlowControlValve_2017.1', 'FlowCorrelation': 'metadata#FlowCorrelation_2017.1', 'Flowline': 'metadata#Flowline_2017.1', 'FluidComponent': 'metadata#FluidComponent_2017.1', 'GasLiftInjection': 'metadata#GasLiftInjection_2017.1', 'GenericBooster': 'metadata#GenericBoosterParameterBag_2017.1', 'GenericEquipment': 'metadata#GenericEquipment_2017.1', 'GLDiagnosticsOp': 'metadata#GLDiagnosticsOperation_2017.1', 'GlobalCatalog': 'metadata#GlobalCatalog_2017.1', 'GravelPack': 'metadata#GravelPack_2017.1', 'HeatExchanger': 'metadata#HeatExchanger_2017.1', 'HeatTransferOptions': 'metadata#HeatTransferOptions_2017.1', 'Injector': 'metadata#Injector_2017.1', 'IPRBackPressure': 'metadata#BackPressureCompletionModel_2017.1', 'IPRDarcy': 'metadata#DarcyCompletionModel_2017.1', 'IPRFetkovitch': 'metadata#FetkovitchEquationModel_2017.1', 'IPRForchheimer': 'metadata#ForchheimerCompletionModel_2017.1', 'IPRHorizontalPI': 'metadata#DistributedCompletionModel_2017.1', 'IPRHydraulicFracture': 'metadata#HydraulicFractureCompletionModel_2017.1', 'IPRJones': 'metadata#JonesCompletionModel_2017.1', 'IPRPIModel': 'metadata#PIModel_2017.1', 'IPRPSSBabuOdeh': 'metadata#DistributedCompletionModel_2017.1', 'IPRSSJoshi': 'metadata#DistributedCompletionModel_2017.1', 'IPRTriLinear': 'metadata#TrilinearTransientModel_2019.1', 'IPRVogel': 'metadata#VogelModel_2017.1', 'Junction': 'metadata#Junction_2017.1', 'Liner': 'metadata#TubingSection_2017.1', 'MeasurementPoint': 'metadata#MeasurementPoint_2017.1', 'MFLFluid': 'metadata#MFLFluid_2017.1', 'MultiphaseBooster': 'metadata#MultiphaseBooster_2017.1', 'MultiplierAdder': 'metadata#MultiplierAdder_2017.1', 'NetworkOptSim': 'metadata#WellOptimizerOperation_2018.1', 'NetworkSim': 'metadata#NetworkSimOperation_2017.1', 'NodalAnalysisOp': 'metadata#NodalAnalysisOperation_2017.1', 'OneSubseaBooster': 'metadata#OneSubseaBoosterParameterBag_2017.1', 'OpenHole': 'metadata#TubingSection_2017.1', 'Packer': 'metadata#Packer_2017.1', 'PCP': 'metadata#PCP_2017.1', 'PTProfileSim': 'metadata#PressureTempProfileOperation_2017.1', 'Pump': 'metadata#GenericPump_2017.1', 'PVTFluid': 'metadata#PVTFluid_2017.1', 'RiskIndexLimits': 'metadata#RiskIndexLimits_2020.1', 'RodPump': 'metadata#RodPump_2017.1', 'SinglephaseSeparator': 'metadata#SinglephaseSeparator_2017.1', 'Sink': 'metadata#Sink_2017.1', 'SlidingSleeve': 'metadata#SlidingSleeve_2017.1', 'Source': 'metadata#Source_2017.1', 'SpotReport': 'metadata#SpotReport_2018.1', 'Study': 'metadata#Study_2017.1', 'SubsurfaceSafetyValve': 'metadata#SSSV_2017.1', 'SystemAnalysisOp': 'metadata#SystemAnalysisOperation_2017.1', 'ThreePhaseSeparator': 'metadata#ThreePhaseSeparator_2017.1', 'Tubing': 'metadata#TubingSection_2017.1', 'TubingPlug': 'metadata#TubingPlug_2017.1', 'TwoPhaseSeparator': 'metadata#TwoPhaseSeparator_2017.1', 'VfpTablesOp': 'metadata#VFPTablesOperation_2017.1', 'WaterTempVelocitySurvey': 'metadata#WaterTempVelocitySurvey_2017.1', 'Well': 'metadata#WellHead_2017.1', 'WellPerformanceCurvesSim': 'metadata#WellCurvesOperation_2018.1', 'WetGasCompressor': 'metadata#OneSubseaWetGasCompressorParameterBag_2017.2'}
+
+MODEL_COMPONENT_DICT:
+Type: <class 'dict'>
+Value: {'BLACKOILFLUID': 'BlackOilFluid', 'BOUNDARY': 'Boundary', 'CASING': 'Casing', 'CHECKVALVE': 'CheckValve', 'CHOKE': 'Choke', 'COMPLETION': 'Completion', 'COMPLETIONCONINGPOINT': 'CompletionConingPoint', 'COMPLETIONMODEL': 'CompletionModel', 'COMPOSITIONALFLUID': 'CompositionalFluid', 'COMPRESSOR': 'Compressor', 'ENGINEKEYWORDS': 'EngineKeywords', 'ESP': 'ESP', 'EXPANDER': 'Expander', 'FILEBASEDFLUID': 'FileBasedFluid', 'FLOWCONTROLVALVE': 'FlowControlValve', 'FLOWCORRELATION': 'FlowCorrelation', 'FLOWLINE': 'Flowline', 'FLUIDCOMPONENT': 'FluidComponent', 'GASLIFTINJECTION': 'GasLiftInjection', 'GENERICBOOSTER': 'GenericBooster', 'GENERICEQUIPMENT': 'GenericEquipment', 'GLDIAGNOSTICSOPERATION': 'GLDiagnosticsOp', 'GLOBALCATALOG': 'GlobalCatalog', 'GRAVELPACK': 'GravelPack', 'HEATEXCHANGER': 'HeatExchanger', 'HEATTRANSFEROPTIONS': 'HeatTransferOptions', 'INJECTOR': 'Injector', 'IPRBACKPRESSURE': 'IPRBackPressure', 'IPRDARCY': 'IPRDarcy', 'IPRFETKOVITCH': 'IPRFetkovitch', 'IPRFORCHHEIMER': 'IPRForchheimer', 'IPRHORIZONTALPI': 'IPRHorizontalPI', 'IPRHYDRAULICFRACTURE': 'IPRHydraulicFracture', 'IPRJONES': 'IPRJones', 'IPRPIMODEL': 'IPRPIModel', 'IPRPSSBABUODEH': 'IPRPSSBabuOdeh', 'IPRSSJOSHI': 'IPRSSJoshi', 'IPRTRILINEAR': 'IPRTriLinear', 'IPRVOGEL': 'IPRVogel', 'JUNCTION': 'Junction', 'LINER': 'Liner', 'MEASUREMENTPOINT': 'MeasurementPoint', 'MFLFLUID': 'MFLFluid', 'MULTIPHASEBOOSTER': 'MultiphaseBooster', 'MULTIPLIERADDER': 'MultiplierAdder', 'NETWORKOPTIMIZERSIMULATION': 'NetworkOptSim', 'NETWORKSIMULATION': 'NetworkSim', 'NODALANALYSISOPERATION': 'NodalAnalysisOp', 'ONESUBSEABOOSTER': 'OneSubseaBooster', 'OPEN_HOLE': 'OpenHole', 'PACKER': 'Packer', 'PCP': 'PCP', 'PTPROFILESIMULATION': 'PTProfileSim', 'PUMP': 'Pump', 'PVTFLUID': 'PVTFluid', 'RISKINDEXLIMITS': 'RiskIndexLimits', 'RODPUMP': 'RodPump', 'SINGLEPHASESEPARATOR': 'SinglephaseSeparator', 'SINK': 'Sink', 'SLIDINGSLEEVE': 'SlidingSleeve', 'SOURCE': 'Source', 'SPOTREPORT': 'SpotReport', 'STUDY': 'Study', 'SUBSURFACESAFETYVALVE': 'SubsurfaceSafetyValve', 'SYSTEMANALYSISOPERATION': 'SystemAnalysisOp', 'THREEPHASESEPARATOR': 'ThreePhaseSeparator', 'TUBING': 'Tubing', 'TUBINGPLUG': 'TubingPlug', 'TWOPHASESEPARATOR': 'TwoPhaseSeparator', 'VFPTABLESOPERATION': 'VfpTablesOp', 'WATERTEMPVELOCITYSURVEY': 'WaterTempVelocitySurvey', 'WELL': 'Well', 'WELLPERFORMANCECURVESOPERATION': 'WellPerformanceCurvesSim', 'WETGASCOMPRESSOR': 'WetGasCompressor'}
+
+MULTIFLASH_COMPONENT_DICT:
+Type: <class 'dict'>
+Value: {'Ammonia': 'AMMONIA', 'Argon': 'ARGON', 'Benzene': 'BENZENE', 'Butane': 'BUTANE', 'Carbon Dioxide': 'CARBON_DIOXIDE', 'Carbon Monoxide': 'CARBON_MONOXIDE', 'Cumene': 'CUMENE', 'Cyclohexane': 'CYCLOHEXANE', 'Cyclopentane': 'CYCLOPENTANE', 'Decane': 'DECANE', 'Diethylene Glycol': 'DIETHYLENE_GLYCOL', 'Docosane': 'DOCOSANE', 'Dodecane': 'DODECANE', 'Dotriacontane': 'DOTRIACONTANE', 'Eicosane': 'EICOSANE', 'Ethane': 'ETHANE', 'Ethanol': 'ETHANOL', 'Ethylbenzene': 'ETHYLBENZENE', 'Ethylcyclohexane': 'ETHYLCYCLOHEXANE', 'Ethylene': 'ETHYLENE', 'Ethylene Glycol': 'ETHYLENE_GLYCOL', 'Helium': 'HELIUM', 'Heneicosane': 'HENEICOSANE', 'Heptacosane': 'HEPTACOSANE', 'Heptadecane': 'HEPTADECANE', 'Heptane': 'HEPTANE', 'Hexacosane': 'HEXACOSANE', 'Hexadecane': 'HEXADECANE', 'Hexane': 'HEXANE', 'Hexatriacontane': 'HEXATRIACONTANE', 'Hydrogen': 'HYDROGEN', 'Hydrogen Sulphide': 'HYDROGEN_SULPHIDE', 'Isobutane': 'ISOBUTANE', 'Isopentane': 'ISOPENTANE', 'Methane': 'METHANE', 'Methanol': 'METHANOL', 'Methylcyclohexane': 'METHYLCYCLOHEXANE', 'Methylcyclopentane': 'METHYLCYCLOPENTANE', 'M-Xylene': 'M_XYLENE', 'Naphthalene': 'NAPHTHALENE', 'Nitrogen': 'NITROGEN', 'Nonacosane': 'NONACOSANE', 'Nonadecane': 'NONADECANE', 'Nonane': 'NONANE', 'Octacosane': 'OCTACOSANE', 'Octadecane': 'OCTADECANE', 'Octane': 'OCTANE', '1,2-Diethylbenzene': 'ONE_2_DIETHYLBENZENE', 'Oxygen': 'OXYGEN', 'O-Xylene': 'O_XYLENE', 'Pentacosane': 'PENTACOSANE', 'Pentadecane': 'PENTADECANE', 'Pentane': 'PENTANE', 'Propane': 'PROPANE', 'P-Xylene': 'P_XYLENE', 'Salt Component': 'SALT_COMPONENT', 'Tetracosane': 'TETRACOSANE', 'Tetradecane': 'TETRADECANE', '3-methyl hexane': 'THREE_METHYL_HEXANE', 'Toluene': 'TOLUENE', 'Triacontane': 'TRIACONTANE', 'Tricosane': 'TRICOSANE', 'Tridecane': 'TRIDECANE', 'Triethylene Glycol': 'TRIETHYLENE_GLYCOL', '2,2-Dimethylpropane': 'TWO_2_DIMETHYLPROPANE', 'Undecane': 'UNDECANE', 'Water': 'WATER'}
+
+ModelClasses:
+Type: <class 'type'>
+Value: <class 'sixgill.core.resources.ModelClasses'>
+
+ModelComponentClassInfo:
+Type: <class 'type'>
+Value: <class 'sixgill.core.mapping_classes.ModelComponentClassInfo'>
+
+ModelComponents:
+Type: <class 'type'>
+Value: <class 'sixgill.definitions.ModelComponents'>
+
+ModelContext:
+Type: <class 'abc.ABCMeta'>
+Value: <class 'sixgill.core.model_context.ModelContext'>
+
+NAN:
+Type: <class 'float'>
+Value: nan
+
+NONE:
+Type: <class 'str'>
+Value: ___NONE___
+
+NodeCatalog:
+Type: <class 'abc.ABCMeta'>
+Value: <class 'sixgill.core.catalog.NodeCatalog'>
+
+Optional:
+Type: <class 'typing._SpecialForm'>
+Value: typing.Optional
+
+POINT_SURFACE_EQUIPMENT:
+Type: <class 'set'>
+Value: {'metadata#WellHead_2017.1', 'metadata#Injector_2017.1', 'metadata#Choke_2017.1', 'metadata#ThreePhaseSeparator_2017.1', 'metadata#GenericPump_2017.1', 'metadata#GenericEquipment_2017.1', 'metadata#EngineKeywords_2017.1', 'metadata#HeatExchanger_2017.1', 'metadata#TwoPhaseSeparator_2017.1', 'metadata#Source_2017.1', 'metadata#Junction_2017.1', 'metadata#Compressor_2017.1', 'metadata#MultiplierAdder_2017.1', 'metadata#SpotReport_2018.1', 'metadata#MultiphaseBooster_2017.1', 'metadata#Expander_2017.1', 'metadata#Sink_2017.1', 'metadata#CheckValve_2017.1', 'metadata#UserEquipment_2017.1'}
+
+Parameters:
+Type: <class 'type'>
+Value: <class 'sixgill.definitions.Parameters'>
+
+PipesimServerError:
+Type: <class 'type'>
+Value: <class 'manta.server.server_proxy.PipesimServerError'>
+
+PipesimSession:
+Type: <class 'traits.has_traits.MetaHasTraits'>
+Value: <class 'manta.server.session.PipesimSession'>
+
+Query:
+Type: <class 'type'>
+Value: <class 'sixgill.core.query.Query'>
+
+REVERSE_MODEL_COMPONENTS:
+Type: <class 'dict'>
+Value: {'BlackOilFluid': 'BLACKOILFLUID', 'Boundary': 'BOUNDARY', 'Casing': 'CASING', 'CheckValve': 'CHECKVALVE', 'Choke': 'CHOKE', 'Completion': 'COMPLETION', 'CompletionConingPoint': 'COMPLETIONCONINGPOINT', 'CompletionModel': 'COMPLETIONMODEL', 'CompositionalFluid': 'COMPOSITIONALFLUID', 'Compressor': 'COMPRESSOR', 'EngineKeywords': 'ENGINEKEYWORDS', 'ESP': 'ESP', 'Expander': 'EXPANDER', 'FileBasedFluid': 'FILEBASEDFLUID', 'FlowControlValve': 'FLOWCONTROLVALVE', 'FlowCorrelation': 'FLOWCORRELATION', 'Flowline': 'FLOWLINE', 'FluidComponent': 'FLUIDCOMPONENT', 'GasLiftInjection': 'GASLIFTINJECTION', 'GenericBooster': 'GENERICBOOSTER', 'GenericEquipment': 'GENERICEQUIPMENT', 'GLDiagnosticsOp': 'GLDIAGNOSTICSOPERATION', 'GlobalCatalog': 'GLOBALCATALOG', 'GravelPack': 'GRAVELPACK', 'HeatExchanger': 'HEATEXCHANGER', 'HeatTransferOptions': 'HEATTRANSFEROPTIONS', 'Injector': 'INJECTOR', 'IPRBackPressure': 'IPRBACKPRESSURE', 'IPRDarcy': 'IPRDARCY', 'IPRFetkovitch': 'IPRFETKOVITCH', 'IPRForchheimer': 'IPRFORCHHEIMER', 'IPRHorizontalPI': 'IPRHORIZONTALPI', 'IPRHydraulicFracture': 'IPRHYDRAULICFRACTURE', 'IPRJones': 'IPRJONES', 'IPRPIModel': 'IPRPIMODEL', 'IPRPSSBabuOdeh': 'IPRPSSBABUODEH', 'IPRSSJoshi': 'IPRSSJOSHI', 'IPRTriLinear': 'IPRTRILINEAR', 'IPRVogel': 'IPRVOGEL', 'Junction': 'JUNCTION', 'Liner': 'LINER', 'MeasurementPoint': 'MEASUREMENTPOINT', 'MFLFluid': 'MFLFLUID', 'MultiphaseBooster': 'MULTIPHASEBOOSTER', 'MultiplierAdder': 'MULTIPLIERADDER', 'NetworkOptSim': 'NETWORKOPTIMIZERSIMULATION', 'NetworkSim': 'NETWORKSIMULATION', 'NodalAnalysisOp': 'NODALANALYSISOPERATION', 'OneSubseaBooster': 'ONESUBSEABOOSTER', 'OpenHole': 'OPEN_HOLE', 'Packer': 'PACKER', 'PCP': 'PCP', 'PTProfileSim': 'PTPROFILESIMULATION', 'Pump': 'PUMP', 'PVTFluid': 'PVTFLUID', 'RiskIndexLimits': 'RISKINDEXLIMITS', 'RodPump': 'RODPUMP', 'SinglephaseSeparator': 'SINGLEPHASESEPARATOR', 'Sink': 'SINK', 'SlidingSleeve': 'SLIDINGSLEEVE', 'Source': 'SOURCE', 'SpotReport': 'SPOTREPORT', 'Study': 'STUDY', 'SubsurfaceSafetyValve': 'SUBSURFACESAFETYVALVE', 'SystemAnalysisOp': 'SYSTEMANALYSISOPERATION', 'ThreePhaseSeparator': 'THREEPHASESEPARATOR', 'Tubing': 'TUBING', 'TubingPlug': 'TUBINGPLUG', 'TwoPhaseSeparator': 'TWOPHASESEPARATOR', 'VfpTablesOp': 'VFPTABLESOPERATION', 'WaterTempVelocitySurvey': 'WATERTEMPVELOCITYSURVEY', 'Well': 'WELL', 'WellPerformanceCurvesSim': 'WELLPERFORMANCECURVESOPERATION', 'WetGasCompressor': 'WETGASCOMPRESSOR'}
+
+REVERSE_SYNTHETIC_CONTEXT_ELEMENTS:
+Type: <class 'dict'>
+Value: {'BoundaryLocation': 'BOUNDARY_LOCATION', 'GLDiagnosticsOp': 'GLDIAGNOSTICSOPERATION', 'Name': 'NAME', 'NetworkOptSim': 'NETWORKOPTIMIZERSIMULATION', 'NetworkSim': 'NETWORKSIMULATION', 'NodalAnalysisOp': 'NODALANALYSISOPERATION', 'NodalPoint': 'NODALPOINT', 'PTProfileSim': 'PTPROFILESIMULATION', 'SystemAnalysisOp': 'SYSTEMANALYSISOPERATION', 'Template': 'TEMPLATE', 'WellPerformanceCurvesSim': 'WELLPERFORMANCECURVESOPERATION'}
+
+SURFACE_MODEL_COMPONENTS:
+Type: <class 'set'>
+Value: {'GenericEquipment', 'Injector', 'EngineKeywords', 'CheckValve', 'MultiphaseBooster', 'Flowline', 'SpotReport', 'Junction', 'Pump', 'ThreePhaseSeparator', 'TwoPhaseSeparator', 'Sink', 'Well', 'Source', 'Expander', 'Compressor', 'MultiplierAdder', 'HeatExchanger', 'Choke'}
+
+SYNTHETIC_CONTEXT_ELEMENTS_DICT:
+Type: <class 'dict'>
+Value: {'BOUNDARY_LOCATION': 'BoundaryLocation', 'GLDIAGNOSTICSOPERATION': 'GLDiagnosticsOp', 'NAME': 'Name', 'NETWORKOPTIMIZERSIMULATION': 'NetworkOptSim', 'NETWORKSIMULATION': 'NetworkSim', 'NODALANALYSISOPERATION': 'NodalAnalysisOp', 'NODALPOINT': 'NodalPoint', 'PTPROFILESIMULATION': 'PTProfileSim', 'SYSTEMANALYSISOPERATION': 'SystemAnalysisOp', 'TEMPLATE': 'Template', 'WELLPERFORMANCECURVESOPERATION': 'WellPerformanceCurvesSim'}
+
+SchemaNodes:
+Type: <class 'type'>
+Value: <class 'sixgill.core.resources.SchemaNodes'>
+
+SyntheticContextElements:
+Type: <class 'type'>
+Value: <class 'sixgill.core.resources.SyntheticContextElements'>
+
+TASK_MODEL_COMPONENTS:
+Type: <class 'set'>
+Value: {'NetworkSim', 'PTProfileSim', 'WellPerformanceCurvesSim', 'SystemAnalysisOp', 'NodalAnalysisOp', 'Study', 'GLDiagnosticsOp', 'NetworkOptSim'}
+
+TEMPLATE:
+Type: <class 'str'>
+Value: ___TEMPLATE___
+
+Tuple:
+Type: <class 'typing._TupleType'>
+Value: typing.Tuple
+
+compute_context:
+Function signature: (root_context: sixgill.core.model_context.AbstractModelContext, context: Optional[str] = None, component: Optional[str] = None, model_context: Optional[sixgill.core.model_context.AbstractModelContext] = None, context_keywords: Optional[Dict[str, str]] = None) -> sixgill.core.model_context.AbstractModelContext
+Documentation: Map fixed API call parameters into the context.
+This is used as a context preparation step in high-level API methods.
+
+Parameters
+----------
+root_context
+name
+component
+model_context
+context_keywords
+
+Returns
+-------
+AbstractModelContext
+    Returns a model context object that represents the model_context the user intended with this plethora of parameters.
+
+defaultdict:
+Type: <class 'type'>
+Value: <class 'collections.defaultdict'>
+
+getLogger:
+Function signature: (name=None)
+Documentation: Return a logger with the specified name, creating it if necessary.
+
+If no name is specified, return the root logger.
+
+get_class_constants:
+Function signature: (cls: type) -> Dict[str, str]
+Documentation: Slurp up the constants from a type into a dictionary
+
+get_link_params:
+Function signature: (link)
+Documentation: None
+
+get_node_id:
+Function signature: (catalog, context, model_component)
+Documentation: None
+
+getmembers:
+Function signature: (object, predicate=None)
+Documentation: Return all members of an object as (name, value) pairs sorted by name.
+Optionally, only return members that satisfy a given predicate.
+
+is_Nan_or_None:
+Function signature: (a, b)
+Documentation: None
+
+is_greaterthan_or_equal:
+Function signature: (a, b)
+Documentation: None
+
+is_lessthan_or_equal:
+Function signature: (a, b)
+Documentation: None
+
+is_undefined:
+Function signature: (value)
+Documentation: None
+
+json:
+Type: <class 'module'>
+Value: <module 'json' from 'C:\\Program Files\\Schlumberger\\Pipesim_PTK_2023.1\\Lib\\json\\__init__.py'>
+
+logging:
+Type: <class 'module'>
+Value: <module 'logging' from 'C:\\Program Files\\Schlumberger\\Pipesim_PTK_2023.1\\Lib\\logging\\__init__.py'>
+
+lookup_class_id_for_model_component:
+Function signature: (model_component: str, allow_exceptions: bool = False) -> Optional[str]
+Documentation: Look up the class @id given the corresponding component name.
+
+if allow_exceptions is true:
+    Throws a KeyError if the component name is not valid.
+else
+    Returns None if the component name is not valid.
+
+lookup_class_information_for_model_component:
+Function signature: (model_component: str, allow_exceptions: bool = False) -> sixgill.core.mapping_classes.ModelComponentClassInfo
+Documentation: Look up the ModelComponentClassInfo for a specified model component.
+The tuple comes from the special handling dictionary if needed or from the regular MODEL_COMPONENTS_TO_CLASSES_DICT
+for the common cases.
+
+if allow_exceptions is true:
+    Throws a KeyError if the component name is not valid.
+else
+    Returns None if the component name is not valid.
+
+math:
+Type: <class 'module'>
+Value: <module 'math' (built-in)>
+
+randint:
+Type: <class 'method'>
+Value: <bound method Random.randint of <random.Random object at 0x000002F96C30E300>>
+
+Inspection completed successfully
+
+Press enter to continue...
+PS C:\Users\wadet>
