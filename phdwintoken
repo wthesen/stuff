@@ -1,0 +1,2037 @@
+
+Import Tokens
+ Top  Previous  Next  
+ 
+
+For custom imports, there is a token that maps to each PHDWin field that can be imported. The following section describes each import token you will see. The tokens are listed by the section in which they appear in the program's Import Center: Case Titles, Columnar Production, Daily Production, Economics, Misc Dates, Other, Price/Expense, Prod Volumes, Test Data and Wellbore Completion.
+
+hmtoggle_plus1 Case Titles
+
+
+
+API County Code
+ 
+Maps non-hyphenated alphanumeric value to "API Number" field of the Case Editor's ID Code tab. Expects 3 characters. Use with "API State Code" and "API Well Code". Do not use with "Well API Code". Will create and populate Test Data Zone/well for multi-well cases Multi "Well API Code" values imported to one case.  Requires "Primary Import ID Code" only.
+ 
+
+API State Code
+ 
+Maps non-hyphenated alphanumeric value to "API Number" field of the Case Editor's ID Code tab. Expects 2 characters. Use with "API County Code" and "API Well Code". Do not use with "Well API Code". Will create and populate Test Data Zone/well for multi-well cases Multi "Well API Code" values imported to one case.  Requires "Primary Import ID Code" only.
+ 
+
+API Well Code
+ 
+Maps non-hyphenated alphanumeric value to "API Number" field of the Case Editor's ID Code tab. Expects 5 or more characters. Use with "API State Code" and "API County Code". Do not use with "Well API Code". Will create and populate Test Data Zone/well for multi-well cases Multi "Well API Code" values imported to one case. Requires "Primary Import ID Code" only.
+ 
+
+Case API Code
+ 
+Maps alphanumeric value to "API Number" field of the Case Editor's ID Code tab ONLY. Maximum of 40 characters. Do not use with "API State Code", "API County Code" or "API Well Code". Requires "Primary Import ID Code" only.
+ 
+
+Case Memo
+ 
+Maps to the case memo field.  Existing case memos will be overwritten.
+ 
+
+Case Multiplier
+ 
+Multiplication factor used for risking cases that is applied to the entire case. The case is run under normal conditions, and then all of the reported numbers are multiplied by this factor for output.
+ 
+
+Case Name
+ 
+Maps alphanumeric value to Case Name field or UWI field (for Canadian cases) of the Case Editor. Maximum 40 characters. Only one name or UWI supported per case. Use "User-Defined ID Code" for alternate entries. Requires "Primary Import ID Code" only.
+ 
+
+Country
+ 
+Maps alphanumeric value to Country of the Case Editor. Maximum of 30 characters. Only one country name per case. Use "User-Defined ID Code" for alternate entries. Requires "Primary Import ID Code" only.
+ 
+
+County
+ 
+Maps alphanumeric value to County of the Case Editor. Also used for Parish in Louisiana or Pool in Canada. Maximum of 30 characters. Only one county name per case. Use "User-Defined ID Code" for alternate entries. Requires "Primary Import ID Code" only.
+ 
+
+Field Code
+ 
+Maps alphanumeric value to "Field Code" field of the Case Editor's ID Code tab. Maximum of 40 characters. Will contain Stage Field codes from commercial data vendors. Only one county name per case.  Requires "Primary Import ID Code" only.
+ 
+
+Field Name
+ 
+Maps alphanumeric value to "Field" of the Case Editor. Maximum of 40 characters. Only one Field name per case. Use "User-Defined ID Code" for alternate entries. Requires "Primary Import ID Code" only.
+ 
+
+Gas Gatherer
+ 
+Maps alphanumeric value to "Gas Gatherer" of the Production Test Tab of the Case Editor. Maximum of 25 characters. Only one Gas Gatherer name per case. Use "User-Defined ID Code" for alternate entries. Requires "Primary Import ID Code" only.
+ 
+
+Gas Gravity
+ 
+Maps numeric value to Gas Specific Gravity (Reference Air) in the Production Test tab of the Case Editor. Supports values > 1.0. One allowed per case. Multiple values not supported; last value imported will be used. No support for importing to Reservoir Fluids Tests. Requires "Primary Import ID Code" only.
+ 
+
+Latitude
+ 
+Maps numeric value to Latitude field of the Case Editor's General Info tab. Supports positive and negative values to 8 decimal places. No support for Min. or Sec. One allowed per case. Last one imported per case is saved. Requires "Primary Import ID Code" only.
+ 
+
+Location
+ 
+Maps alphanumeric value to "Location" field of the Case Editor's General Info tab. Requires "Primary Import ID Code" only.
+ 
+
+Longitude
+ 
+Maps numeric value to Longitude field of the Case Editor's General Info tab.  Supports positive and negative values to 8 decimal places. No support for Min. or Sec. One allowed per case. Last one imported per case is saved. Requires "Primary Import ID Code" only.
+ 
+
+Major Phase
+ 
+Maps to and sets a case's major phase. Supports "Oil" or "Gas" only. Requires "Primary Import ID Code" only.
+ 
+
+Offshore
+ 
+Offshore/Onshore switch
+ 
+
+Oil Gatherer
+ 
+Maps alphanumeric value to "Oil Gatherer" of the Production Test Tab of the Case Editor. Maximum of 25 characters. Only one Oil Gatherer name per case. Use "User-Defined ID Code" for alternate entries. Requires "Primary Import ID Code" only.
+ 
+
+Oil Gravity
+ 
+Maps numeric value to "Oil Gravity" in the Production Tests tab of the Case Editor and sets the gravity units to Specific Gravity. Can be viewed on the Case Editor's Expense tab.  Supports values > 1.0.
+ 
+
+Operator Code
+ 
+Maps alphanumeric value to "Operator Code" field of the Case Editor's ID Code tab. Maximum 40 characters. Only one Operator Code per case. Use "User-Defined ID Code" for alternate entries.  Requires "Primary Import ID Code" only.
+ 
+
+Operator Name
+ 
+Maps alphanumeric value to "Operator Name" field of the Case Editor. Maximum of 30 characters. Only one Operator Code per case. Use "User-Defined ID Code" for alternate entries.  Requires "Primary Import ID Code" only.
+ 
+
+Partnership
+ 
+Designates a partnership for newly created investments or changes in ownership.  If this token is not used, then the currently active partnership will receive the results of the import.
+ 
+
+Primary Import ID Code
+ 
+This is a special import token that is used to associate all remaining data in a given record to one specific case. This token will automatically map to the first data element per record of any data to be imported. The data element must identify a case's unique alphanumeric value as prompted for during the initial import set up. It can only be mapped once per table or sheet.
+ 
+
+PRMS Category
+ 
+Petroleum Resources Management System: Used to classify cases and indicate the degree of certainty that the resources will be extracted. The category falls under the case's class. Examples of PRMS category include proved, probable, possible, etc. 
+ 
+
+PRMS Class
+ 
+Used to classify cases. Examples of PRMS class include reserves, contingent, prospective, etc.
+ 
+
+PRMS Subcategory
+ 
+Used to classify cases and fall below the case’s category. Subcategories include producing, non-producing, shut-in, behind pipe, etc.
+ 
+
+Res Category (Class & Cat Abbr)
+ 
+Maps Reserve Category abbreviations to the reserve category. The following abbreviations are converted: DP (Producing), BP (Behind Pipe), NP (Non-Producing), SI (Shut-In), UD (Undeveloped). Does not convert: PA (P&A) or IJ (Injection)
+ 
+
+Res Pressure
+ 
+Maps one Reservoir Pressure per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" or "Well Number-Start Test-No Append" w/ "Test Date" on same line. Units are defined by existing case convention for existing cases or default import unit convention for new cases.
+ 
+
+Res Temp
+ 
+Maps one Casing Pressure per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" or "Well Number-Start Test-No Append" w/"Test Date" on same line. Units are defined by existing case convention for existing cases or default import unit convention for new cases.
+ 
+
+Reservoir
+ 
+Imports an alphanumeric string into the Reservoir field. Supports up to 40 characters.
+ 
+
+Retrieval Code
+ 
+Maps alphanumeric value to "Retrieval Code" field of the Case Editor's ID Code tab. Maximum of 40 characters. Do not map for Aries import. Requires "Primary Import ID Code" only
+ 
+
+RRC District Code
+ 
+Maps alphanumeric value to "RRC Dist Code" field of the Case Editor's ID Code tab. Maximum of 40 characters. Requires "Primary Import ID Code" only
+ 
+
+State
+ 
+Imports a two character state, parish or province. (e.g. TX, Al, NM)
+ 
+
+Temp Gradient (deg/100ft or deg/100m)
+ 
+Imports the average temperature increase per 100 ft or 100 M. Units are defined by case's existing Unit Convention or default convention is used if new case is created. No unit conversions are applied.
+ 
+
+Temp Gradient (deg/ft or deg/m)
+ 
+Imports the average temperature increase per ft or M. Units are defined by case's existing Unit Convention or default convention is used if new case is created. No unit conversions are applied.
+ 
+
+Total Depth
+ 
+Imports a single numerical value per case. Case units or default convention for new wells is used. No unit conversions are applied.
+ 
+
+Tubing Diameter
+ 
+Imports the inside diameter of a tubing string. Only one per case supported. Case units or default conventions for new cases are used. No unit conversions are applied.
+ 
+
+Unit Convention
+ 
+Defines import convention and thus units for incoming data for a case. Conventions can change case by case. Alphanumeric. Must match existing convention in PHDWin. If no match, "Imperial" convention assumed. Highly recommended all incoming data conforms to one Unit Convention. OR  Must be consistent for entire incoming data set for a single case.
+ 
+
+User-Def Gravity (cur product)
+ 
+Measure of  relative density for current product
+ 
+
+User-Def Gravity Current Product
+ 
+Measure of  relative density for current product
+ 
+
+User-Def Gravity Type (cur product)
+ 
+Acceptable values are "API", "SG", or "Gas"
+ 
+
+User-Defined ID Code
+ 
+Maps alphanumeric value to "Operator Code" field of the Case Editor's ID Code tab. Maximum of 40 characters. Requires "Primary Import ID Code" only.  Case-level Static Variable values can also be imported using this token.  This token will not import Global-level static variables, nor will it create new static variables.
+ 
+
+UWI Code (Canada)
+ 
+Maps alphanumeric value to "UWI Code" field of the Case Editor's General Info tab for Canadian cases ONLY. Used in Canada instead of Case Name. Requires "Primary Import ID Code".
+ 
+
+Volume Multiplier
+ 
+Multiplication factor used to risk a case. It is applied to the volumes of the case before economics are run. This method of risk affects mostly revenues and volumes, and only those expenses that are tied to production volumes.
+ 
+
+Well Num- Append to Case Name
+ 
+Used to map test data or wellbore/completion data to the correct wellbore in the case.  This text will be appended to the Case Name of a case.  This is the import trigger token for production tests and for wellbore/completion data
+ 
+
+Well Num- No Append to Case Name
+ 
+Used to map test data or wellbore/completion data to the correct wellbore in the case.  This text will be not appended to the Case Name of a case.  This is the import trigger token for production tests and for wellbore/completion data
+ 
+
+Well Spacing
+ 
+Imports a numerical value for the spacing description for a case.  Maximum of 6 characters.  Used with case's existing Unit Convention.  New cases will use the default convention.
+ 
+
+Well Type
+ 
+Imports the Well Type listed in the Gen Info tab of the Case Editor.  Values must match existing types in the Case Editor, or the Well Type will list as "Unknown."  Types include Flowing, Pump, Inject, Unknown, SWD, & Source.
+ 
+
+hmtoggle_plus1 Columnar Production
+
+
+
+Days On (Apr)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Aug)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Dec)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Feb)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Jan)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Jul)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Jun)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Mar)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (May)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Nov)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Oct)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Days On (Sep)
+ 
+Days On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are days.
+ 
+
+Gas Production (Apr)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Aug)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Dec)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Feb)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Jan)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Jul)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Jun)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Mar)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (May)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Nov)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Oct)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Gas Production (Sep)
+ 
+Gas production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Mcf.
+ 
+
+Hours On (Apr)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Aug)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Dec)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Feb)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Jan)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Jul)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Jun)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Mar)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (May)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Nov)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Oct)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Hours On (Sep)
+ 
+Hours On records for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are hours.
+ 
+
+Oil Production (Apr)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Aug)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Dec)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Feb)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Jan)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Jul)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Jun)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Mar)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (May)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Nov)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Oct)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Oil Production (Sep)
+ 
+Oil production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+User-def Prod (Apr)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Aug)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Dec)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Feb)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Jan)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Jul)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Jun)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Mar)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (May)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Nov)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Oct)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-def Prod (Sep)
+ 
+Production for the month specified regarding the user-defined product listed by the User-defined Product[Columnar] token.  Requires Prod year(yyyy)-Start Record token.  Base units are specified in the target cases' convention.
+ 
+
+User-defined Product [Columnar]
+ 
+Used for importing production for user-defined products.  The product name is listed in this column for every record of production.  Requires Prod year(yyyy)-Start Record token.  Base units are defined in the target cases' convention.
+ 
+
+Water Production (Apr)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Aug)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Dec)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Feb)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Jan)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Jul)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Jun)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Mar)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (May)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Nov)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Oct)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Water Production (Sep)
+ 
+Water production for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are Bbl.
+ 
+
+Well Count (Apr)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Aug)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Dec)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Feb)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Jan)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Jul)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Jun)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Mar)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (May)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Nov)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Oct)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+Well Count (Sep)
+ 
+Well count for the month specified.  Requires Prod year(yyyy)-Start Record token.  Base units are #.
+ 
+
+hmtoggle_plus1 Daily Production
+
+
+
+CO2 [Daily Prod Date]
+ 
+The Daily CO2 volume tied to the current Daily Production date.  Base units are Mcf.
+ 
+
+Condensate [Daily Prod Date]
+ 
+The Daily Condensate volume tied to the current Daily Production date.  Base units are bbl.
+ 
+
+Daily Production Date 
+ 
+The daily production date tied to the current primary id code and to the current daily product.  This is the trigger import token and must be to the far left with only the primary import id code before it in the import file.
+ 
+
+Daily Production Product
+ 
+The daily product tied to the current primary id code and to the current daily production date.  Can be used to import custom daily products.
+ 
+
+Daily Production Units
+ 
+The current units for the daily volume.  
+ 
+
+Daily Production Volume
+ 
+The daily volume tied to the current primary id code, the current daily product and the daily production date
+ 
+
+Gas [Daily Prod Date]
+ 
+The Daily Gas volume tied to the current Daily Production date.  Base units are Mcf.
+ 
+
+Helium [Daily Prod Date]
+ 
+The Daily Helium volume tied to the current Daily Production date.  Base units are Mcf.
+ 
+
+NGL [Daily Prod Date]
+ 
+The Daily NGL volume tied to the current Daily Production date.  Base units are gal.
+ 
+
+Oil [Daily Prod Date]
+ 
+The Daily Oil volume tied to the current Daily Production date.  Base units are bbl.
+ 
+
+Water [Daily Prod Date]
+ 
+The Daily Water volume tied to the current Daily Production date.  Base units are bbl.
+ 
+
+hmtoggle_plus1 Economics 
+
+
+
+Alberta DRC- Credit Used April 09-10
+ 
+Alberta Drilling Royalty Credit for wells finished between April 09-10 used prior to Eco Start.    Should not be used if Eco Start after April 2011 or before April 2010.
+ 
+
+Alberta DRC- Credit Used April 10-11
+ 
+Alberta Drilling Royalty Credit for wells finished between April 10-11 used prior to Eco Start.   Should not be used if Eco Start after April 2011 or before April 2010.
+ 
+
+Alberta DRC- Roy Paid April 09-10
+ 
+Net Crown Royalty paid before the Eco Start date and during the period April 09 up to April 10. Alberta DRC is limited to this amount. Should not be used if Eco Start after April 2011 or before April 2010.
+ 
+
+Alberta DRC- Roy Paid April 10-11
+ 
+Net Crown Royalty paid before the Eco Start date and during the period April 10 up to April 11. Alberta DRC is limited to this amount.   Should not be used if Eco Start after April 2011 or before April 2010.
+ 
+
+Alberta Holiday 1 Entered Remaining
+ 
+The amount of the holiday 1 royalty remaining after the Eco Start date.
+ 
+
+Alberta Holiday 1 Input
+ 
+If non-zero entered values for the holiday 1 royalty are used rather than calculated values.  Equivalent to selecting the input option on the royalty tab.
+ 
+
+Alberta Holiday 1 Used Deduct
+ 
+The amount of the holiday 1 royalty used prior to the Eco Start date.
+ 
+
+Alberta Holiday 2 Entered Remaining
+ 
+The amount of the holiday 2 royalty remaining after the Eco Start date.
+ 
+
+Alberta Holiday 2 Input
+ 
+If non-zero entered values for the holiday 2 royalty are used rather than calculated values.  Equivalent to selecting the input option on the royalty tab.
+ 
+
+Alberta Holiday 2 Used Deduct
+ 
+The amount of the holiday 2 royalty used prior to the Eco Start date.
+ 
+
+Annual User- Def Net Intan Invest (M$)
+ 
+Creates an intangible investment at the first of the year listed in "Investment Date."  The column name used to import this investment will become the category, and description of the investment will be the first four letters of the category and then the date.  Requires "Investment Date" token.
+ 
+
+Annual User- Def Net Tan Invest (M$)
+ 
+Creates a tangible investment at the first of the year listed in "Investment Date."  The column name used to import this investment will become the category, and description of the investment will be the first four letters of the category and then the date.  Requires "Investment Date" token.
+ 
+
+British Columbia Freehold CoalBed Used
+ 
+The amount of the freehold holiday royalty used  prior to the Eco Start date.
+ 
+
+British Columbia CoalBed Input
+ 
+If non-zero entered remaining values are used rather than calculated values.  Equivalent to selecting the input option on the royalty tab.
+ 
+
+British Columbia CoalBed Used
+ 
+The amount of the holiday royalty used prior to the Eco Start date.
+ 
+
+British Columbia CoalBed Remaining
+ 
+The amount of the holiday royalty remaining on the Eco Start date.
+ 
+
+British Columbia Deep Input
+ 
+If non-zero entered remaining values are used rather than calculated values.  Equivalent to selecting the input option on the royalty tab.
+ 
+
+British Columbia Deep Remaining
+ 
+The amount of the holiday royalty remaining on the Eco Start date.
+ 
+
+British Columbia Deep Used
+ 
+The amount of the holiday royalty used prior to the Eco Start date.
+ 
+
+British Columbia DeepDiscovery Input
+ 
+If non-zero entered remaining values are used rather than calculated values.  Equivalent to selecting the input option on the royalty tab.
+ 
+
+British Columbia DeepDiscovery Used
+ 
+The amount of the holiday royalty used prior to the Eco Start date.
+ 
+
+British Columbia DeepDiscovery Remaining
+ 
+The amount of the holiday royalty remaining on the Eco Start date.
+ 
+
+British Columbia DeepReentry Input
+ 
+If non-zero entered remaining values are used rather than calculated values.  Equivalent to selecting the input option on the royalty tab.
+ 
+
+British Columbia DeepReentry Used
+ 
+The amount of the holiday royalty used prior to the Eco Start date.
+ 
+
+British Columbia DeepReentry Remaining
+ 
+The amount of the holiday royalty remaining on the Eco Start date.
+ 
+
+British Columbia Freehold CoalBed Remaining
+ 
+The amount of the freehold holiday royalty remaining on the Eco Start date.
+ 
+
+British Columbia Infrastruct Input
+ 
+If non-zero entered remaining values are used rather than calculated values.  Equivalent to selecting the input option on the royalty tab.
+ 
+
+British Columbia Infrastruct Used
+ 
+The amount of the holiday royalty used prior to the Eco Start date.
+ 
+
+British Columbia Infrastruct Remaining
+ 
+The amount of the holiday royalty remaining on the Eco Start date.
+ 
+
+British Columbia ModDeep Input
+ 
+If non-zero entered remaining values are used rather than calculated values.  Equivalent to selecting the input option on the royalty tab.
+ 
+
+British Columbia ModDeep Used
+ 
+The amount of the holiday royalty used prior to the Eco Start date.
+ 
+
+British Columbia ModDeep Remaining
+ 
+The amount of the holiday royalty remaining on the Eco Start date.
+ 
+
+British Columbia Summer Input
+ 
+If non-zero entered remaining values are used rather than calculated values.  Equivalent to selecting the input option on the royalty tab.
+ 
+
+British Columbia Summer Used
+ 
+The amount of the holiday royalty used prior to the Eco Start date.
+ 
+
+British Columbia Summer Remaining
+ 
+The amount of the holiday royalty remaining on the Eco Start date.
+ 
+
+Case Discount Factor (%)
+ 
+Maps numeric discount rate in percentage (%) for each case's discounting. "Allow Individual Case Override" (Project Properties Discounting tab) must be checked on before different discounting rates can be used on each case. The project discount rates will always be used to calculate totals and subtotals.
+ 
+
+ECL After Date
+ 
+Maps to "ECL After" date field on the Expense Tab of the Case Editor. Accepts dates as MM/DD/YYYY (US) or DD/MM/YYYY (European/non-US) depending on Windows Regional Options settings. No link date support. Requires "Primary Import ID Code" only.
+ 
+
+Init Condensate Yield
+ 
+Creates or edits the Condensate product and sets the product to a formula: Gas x ___ where ___ is the value listed here.
+ 
+
+Init Gas Rev Int
+ 
+Imports initial product-specific gas revenue interest for a case.  Requires token "Init Work Int (frac)" to be used simultaneously.  Overwrites Init Rev Int (frac) when gas is major phase. Values should be decimal and are restricted to 8 decimal places.
+ 
+
+Init Lease NRI (frac)
+ 
+Imports the Initial Lease NRI for a case.  Values should be decimal and are restricted to 8 decimal places.
+ 
+
+Init NGL Yield
+ 
+Creates or edits the NGL product and sets the product to a formula: Gas x ___ where ___ is the value listed here.
+ 
+
+Init Oil Rev Int
+ 
+Imports initial product-specific oil revenue interest for a case.  Requires token "Init Work Int (frac)" to be used simultaneously.  Overwrites Init Rev Int (frac) when oil is major phase.  Values should be decimal and are restricted to 8 decimal places.
+ 
+
+Init Rev Int (frac)
+ 
+Imports the Initial Revenue Interest for a case.  Overwrites product-specific revenue interest when those other interests are not imported.  Ignored when also importing product-specific revenue interest.  Values should be decimal and are restricted to 8 decimal places.
+ 
+
+Init Royalty Int (frac)
+ 
+Imports the Initial Royalty Interest for a case.  This value will be added or subtracted from the Initial Revenue Interest.  Values should be decimal and are restricted to 8 decimal places.
+ 
+
+Init Work Int (frac)
+ 
+Imports the Initial Working Interest for a case.  Values should be decimal and are restricted to 8 decimal places.
+ 
+
+Intangible Investment Amount (M$)
+ 
+Inserts an intangible amount for a new investment.  Requires token "Investment Date."  Can be used with "Tangible Investment Amount M$."
+ 
+
+Investment Category
+ 
+Inserts a category for an investment.  Categories determine depreciation schedules in after tax mode.  Categories that do not exist in the Project Properties will be created.  Requires token "Investment Date."
+ 
+
+Investment Date
+ 
+Inserts date for a new investment.  Should be used with either Intangible or Tangible Investment Amount tokens (or both) as well as Investment Description and Investment Type Net/Gross.
+ 
+
+Investment Date Offset/Cum Value
+ 
+Offsets Investment Date by a number of days or cumulative amount of production.  Requires token "Investment Date."
+ 
+
+Investment Description
+ 
+Inserts a description for an investment.  Requires token "Investment Date."
+ 
+
+Investment Type Net/Gross
+ 
+Designates an investment as Gross or Net.  Full text "Gross" or "Net" should be used when importing this option.  Requires token "Investment Date."
+ 
+
+Net Salvage/P&A (M$)
+ 
+Imports a net investment designated as salvage / P&A.
+ 
+
+No Expense Before Date
+ 
+Maps to "No Expense Before" date field on the Expense Tab of the Case Editor. Accepts dates as MM/DD/YYYY (US) or DD/MM/YYYY (European/non-US) depending on Windows Regional Options settings. No link date support. Requires "Primary Import ID Code" only.
+ 
+
+Projection (Dec)l Min (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection (Dec)line (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection (Dec)line (Inst.)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection BegCum (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection CumXProd (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection Current Product
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection  End Date (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection EndCum (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection Hyp Factor (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection Qf (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection Qi (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection Seg Vol (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection Segment Years (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection Solve For (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection Start Date (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection Type (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Projection  Units (cur product)
+ 
+Used for importing or mass editing projection parameters with the Projection Edit report.
+ 
+
+Tangible Investment Amount (M$)
+ 
+Inserts an tangible amount for a new investment.  Requires token "Investment Date."  Can be used with "Intangible Investment Amount M$."
+ 
+
+hmtoggle_plus1 Misc Dates
+
+
+
+
+ 
+
+ 
+
+
+ 
+
+ 
+
+hmtoggle_plus1 Other
+
+
+
+ARIES Eco Command Line
+ 
+Maps alphanumeric "Expression" field in the Aries Windows "AC_Economics" Table or the "ECO_DATA" field in the Aries DOS "ECONOMIC" table. For Aries Windows Sort = 5. For Aries DOS Sort = 4. Used in conjunction with "Aries Eco Keyword", "Aries Eco Section" and "Aries Qualifier" tokens.
+ 
+
+ARIES Eco Keyword
+ 
+Maps alphanumeric "Keyword" field in the Aries Windows "AC_Economics" Table. Not used in Aries DOS because the keyword is in the "ECO_DATA" field. Sort = 4. Used in conjunction with "Aries Eco Command Line", "Aries Eco Section" and "Aries Qualifier" tokens.
+ 
+
+ARIES Eco Section
+ 
+Maps alphanumeric "Section" field in the Aries Windows "AC_Economics" Table or the "ECO_TYPE" field in the Aries DOS "ECONOMIC" table. For Aries DOS and Windows Sort = 2. Used in conjunction with "Aries Eco Keyword", "Aries Qualifier" and "Aries Command Line" tokens.
+ 
+
+ARIES Qualifier
+ 
+Maps alphanumeric "Qualifier" field in the Aries Windows "AC_Economics" table or the "ECO_QUALIFIER" field in the Aries DOS "ECONOMIC" table. Qualifiers are set by selecting the "Qualifiers" Button on the Custom Import window. Qualifiers can be set by 5 sections (Projection, Ownership, Investment, price, Expense, and Tax). All other eco qualifiers will be resolved for one unique economics solution. Used in conjunction with "Aries Eco Keyword", "Aries Eco Section" and "Aries Qualifier" tokens.
+ 
+
+Graph Comment Justify
+ 
+Sets justification for graph note text alignment.  Supported input is "L" (for Left), "R" (for Right), or "C" (for Centered). Requires "Graph Comment Pointer" "Graph Comment Product", "Graph Comment Text", "Graph Comment XPos (Date)", "Graph Comment YPos", and "Graph Comment Vertical/Horizontal" tokens.
+ 
+
+Graph Comment Pointer
+ 
+Controls display of pointer symbol for imported graph notes.  Supported values are 0 (for pointer turned off) or 1 (for pointer turned on).  Requires "Graph Comment Product", "Graph Comment Text", "Graph Comment XPos (Date)", "Graph Comment YPos", "Graph Comment Justify" and "Graph Comment Vertical/Horizontal" tokens.
+ 
+
+Graph Comment Product
+ 
+Associates the created graph note with a specific product.  Supported values are "Gas", "Oil", "Water", or "Grid".  This field must be mapped directly after the Primary Import ID column (this column must be the second column.)  Requires "Graph Comment Text", "Graph Comment XPos (Date)", "Graph Comment YPos", "Graph Comment Pointer", "Graph Comment Justify" and "Graph Comment Vertical/Horizontal" tokens.
+ 
+
+Graph Comment Text
+ 
+Imports the text for a graph note.  Only string notes are supported; paragraph notes are not supported.  Limited to 46 characters.  Requires "Graph Comment Product", "Graph Comment XPos (Date)", "Graph Comment YPos", "Graph Comment Pointer", "Graph Comment Justify" and "Graph Comment Vertical/Horizontal" tokens.
+ 
+
+Graph Comment Vertical/Horizontal
+ 
+Sets horizontally or vertically alignment for a graph note.  Supported values are H (horizontal) or V (vertical).  Requires "Graph Comment Product", "Graph Comment Text", "Graph Comment XPos (Date)", "Graph Comment YPos", "Graph Comment Pointer" and "Graph Comment Justify" tokens.
+ 
+
+Graph Comment XPos (Date)
+ 
+Sets X coordinate for imported graph note.  Use date format mm/dd/yyyy or yyyy.decimal for notes linked to a product (Gas, Oil, Water).  Grid note values from 0 to 100 are supported. A 0 value is the left axis; 100 is the right axis.  Requires "Graph Comment Product", "Graph Comment Text", "Graph Comment YPos", "Graph Comment Justify", "Graph Comment Pointer" and "Graph Comment Vertical/Horizontal" tokens.
+ 
+
+Graph Comment YPos
+ 
+Sets Y coordinate for imported graph note.  For notes linked to a product (Oil, Gas, Water), this is the volume in base units (bbl , Mcf).  For grid notes, this is a value from 0-100 where 0 is the bottom of the graph and 100 is the top of the graph. Requires "Graph Comment Product", "Graph Comment Text", "Graph Comment XPos (Date)", "Graph Comment Justify", "Graph Comment Pointer" and "Graph Comment Vertical/Horizontal" tokens.
+ 
+
+Other Inj [Prod Date]
+ 
+Must be preceded by "Production Date" token. Monthly numeric injection fluid volume will be populated for the production month specified. Units are expected to be in base units of the convention used to import the data. i.e. bbl, etc.
+ 
+
+hmtoggle_plus1 Price/Expense 
+
+
+
+Advalorem Tax (%)
+ 
+Creates initial, single segment (Eco Start to ECL), case specific, US Local Tax in % units only. Overwrites all pre-existing segments. Numeric. Forces tax to be "combined" with affect economic limit on and use working interest off. No support for currency /unit or /month or /equiv. production or WI based or multiple segment.
+ 
+
+Annual Lease Expense (M$) [Prod Date]
+ 
+Must be preceded by "Production Date" token. The first record creates a case specific "Fixed Cost" expense segment starting at the Eco Start date, and following records create a a new cost segment on the first day of the month and year specified by the date token. Mid month or year changes not supported. Units are expected to be in thousands (M) of currency units per year and will be converted to currency units per month.
+ 
+
+Annual User-Def Price [Prod Date]
+ 
+Must be preceded by "Production Date" token. First record creates a case specific price starting at the Eco Start date, and following records create a new price segment based on the Production Date column. Mid month or year changes not supported. For existing cases, Units should match the case's currency per base unit. $/Bbl, $/MMBtu or $C/E3M3. Three decimal places supported. If no product match exists in the convention, the product is added to the case. If no match with the convention, record is skipped.
+ 
+
+Condensate Price
+ 
+Creates a single segment, case specific, initial (linked to Eco Start Date) Condensate price overwriting all existing pricing. Price units will be the case currency (case specific) divided by the import convention's Condensate base unit. Requires "Primary Import ID Code" only.
+ 
+
+Condensate Price Diff $
+ 
+Creates a single segment, case specific Condensate currency price differential. This differential is either additive or subtractive and applies after the % differential. Units will be in the case's currency (case specific) divided by Condensate's base units. i.e. $/bbl, $/ gal. No unit conversions are applied on import. If a new case is built, the projects default currency and import conventions base units will be assumed. Requires "Primary Import ID Code" only.
+ 
+
+Condensate Price Diff (%)
+ 
+Creates a single segment, case specific Condensate percent price differential. This differential is a positive or negative percentage (%) adjustment factor. (10% increases, -10% decreases) This adjustment represents the % change. Factors to 7 decimal places are supported. Units are dimensionless. Applied before the $ differential. Requires "Primary  Import ID Code" only.
+ 
+
+Condensate Sev Tax ($/vol)
+ 
+Maps by case to the Condensate State tax for US and International modeling. Will create a single segment, case specific State tax with initial $/vol tax rate equal to imported value. If used with "Condensate Sev (%)," both will appear in the segment. Any existing State tax will be replaced. Units are in case's currency per case's base unit and support 3 decimal places. No volume conversions applied. No multi-segment support. No Canadian equivalent. Requires "Primary Import ID Code" only.
+ 
+
+Condensate Sev Tax (%)
+ 
+Creates a single segment, case specific Condensate State tax for US and International modeling. Overwrites any existing state tax. If used with "Condensate Sev ($/vol)," both will appear in the single segment. For cases with existing case specific State tax, the single segment's rate will be edited. Units in % and supports 9 decimal places. No multi-segment support. No Canadian equivalent. Requires "Primary Import ID Code" only.
+ 
+
+Deck Cap Value
+ 
+Only applicable to the base price or expense. Not applicable to shrinkage, escalations or differentials. This value should be set on the first segment of the deck and all others will be ignored
+ 
+
+Deck Fixed Esc
+ 
+Either a 1 for True or 0 for False. Indicates whether or not there is fixed escalation
+ 
+
+Deck Length (months)
+ 
+The number of months that the segment lasts. This must be populated for each segment of the deck. To continue until the economic limit, input ECL
+ 
+
+Deck Product
+ 
+The product that the price, expense or shrinkage is applied to. For Fixed expenses, use "Case", for Well expenses, use "Well". Shrinkage can only be applied to Gas-type products. Revenue can be applied to any volume based product.
+ 
+
+Deck Start Date
+ 
+The Import trigger token for decks.  This must be the left most column with only the primary id code proceeding it in the import file.  The date is only required for the first segment of the deck. It can be populated with a hard-coded or linked date when the deck begins. The length of each segment is set with the # of Months in the next column.
+ 
+
+Deck Stream
+ 
+The default streams are Revenue, Op Cost, Trans Cost, Other Cost, Well Cost, Fixed Cost, or Shrunk Volume.
+ 
+
+Deck Type
+ 
+The type of deck. Options include “Shrinkage Percent”, “Shrinkage Add”, “Price”, “Percent Differential”, “Add Differential”, “Energy Factor”, “Expense”, “Percent Escalation”, “Add Escalation” (without the parenthesis).
+ 
+
+Deck Units
+ 
+The units tied to the current segment of the current deck.
+ 
+
+Deck Value
+ 
+The value of the deck (i.e., the value of the price segment, expense segment, shrunk volume, etc).
+ 
+
+Energy Factor (BTU/scf or MJ/m3)
+ 
+Maps by case to the Gas Energy (BTU) factor. Usually measured in BTU/scf (Imperial) or Mj/m3 (SI). No unit conversions applied. Existing case convention used.
+ 
+
+Gas Price Diff ($)
+ 
+Creates a single segment, case specific Gas currency price differential. This differential is either additive or subtractive and applies after the % differential. Units will be in the case's currency (case specific) divided by Gas's base units. i.e. $/Mcf $/MMBtu. No unit conversions are applied on import. If a new case is built, the projects default currency and import conventions base units will be assumed. Requires "Primary Import ID Code" only.
+ 
+
+Gas Price Diff (%)
+ 
+Creates a single segment, case specific Gas percent price differential. This differential is a positive or negative percentage (%) adjustment factor. (10% increases, -10% decreases) This adjustment represents the % change. Factors to 7 decimal places are supported. Units are dimensionless. Applied before the $ differential. Requires "Primary Import ID Code" only.
+ 
+
+Gas Sev Tax ($/vol)
+ 
+Maps by case to the Gas State tax for US and International modeling. Will create a single segment, case specific State tax with initial $/vol tax rate equal to imported value. If used with "Gas Sev (%)," both will appear in the segment. Any existing State tax will be replaced. Units are in case's currency per case's base unit and support 3 decimal places. No volume conversions applied. No multi-segment support. No Canadian equivalent. Requires "Primary Import ID Code" only.
+ 
+
+Gas Sev Tax (%)
+ 
+Creates a single segment, case specific Gas State tax for US and International modeling. Overwrites any existing state tax. If used with "Gas Sev ($/vol)," both will appear in the single segment. For cases with existing case specific State tax, the single segment's rate will be edited. Units in % and supports 9 decimal places. No multi-segment support. No Canadian equivalent. Requires "Primary Import ID Code" only.
+ 
+
+Init Condensate Op Cost
+ 
+Creates a single segment, case specific OpCost for Condensate linked to the Eco Start date. Overwrites pre-existing OpCost. OpCosts are unit volume costs paid only by working interest holders. Units are case currency divided by case's Condensate base volume unit. e.g. $/bbl. No unit conversions calculated. No multi-segment expense support. Requires "Primary Import ID Code" only.
+ 
+
+Init Fixed Cost (100% $/mon)
+ 
+Creates a single segment, case specific cost linked to the Eco Start date. Overwrites pre-existing Fixed Cost. Fixed Cost is paid only by working interest holders. Units are case currency. e.g. $ or $C. No currency conversions calculated. Project default currency used for new cases. No multi-segment expense support. Requires "Primary Import ID Code" only.
+ 
+
+Init Gas Op Cost
+ 
+Creates a single segment, case specific OpCost for Gas linked to the Eco Start date. Overwrites pre-existing OpCost. OpCosts are unit volume costs paid only by working interest holders. Units are case currency divided by case's Gas base volume unit. e.g. $/Mcf. No unit conversions calculated. No multi-segment expense support. Requires "Primary Import ID Code" only.
+ 
+
+Init Gas Price
+ 
+Creates a single segment, case specific, initial (linked to Eco Start Date) Gas price overwriting all existing pricing. Price units will be the case currency (case specific) divided by the import convention's Gas base unit. Requires "Primary Import ID Code" only.
+ 
+
+Init Gas Trans Cost
+ 
+Creates a single segment, case specific TransCost for Gas linked to the Eco Start date. Overwrites pre-existing TransCost. TransCosts are unit volume costs paid only by revenue interest holders. Units are case currency divided by case's Gas base volume unit. e.g. $/Mcf. No unit conversions calculated. No multi-segment expense support. Requires "Primary Import ID Code" only.
+ 
+
+Init NGL Op Cost
+ 
+Creates a single segment, case specific OpCost for NGL linked to the Eco Start date. Overwrites pre-existing OpCost. OpCosts are unit volume costs paid only by working interest holders. Units are case currency divided by case's NGL base volume unit. e.g. $/gal or $/bbl. No unit conversions calculated. No multi-segment expense support. Requires "Primary Import ID Code" only.
+ 
+
+Init Oil Op Cost
+ 
+Creates a single segment, case specific OpCost for Oil linked to the Eco Start date. Overwrites pre-existing OpCost. OpCosts are unit volume costs paid only by working interest holders. Units are case currency divided by case's Oil base volume unit. e.g. $/bbl. No unit conversions calculated. No multi-segment expense support. Requires "Primary Import ID Code" only.
+ 
+
+Init Oil Price
+ 
+Creates a single segment, case specific, initial (linked to Eco Start Date) Oil price overwriting all existing pricing. Price units will be the case currency (case specific) divided by the import convention's Oil base unit. Requires "Primary Import ID Code" only.
+ 
+
+Init Oil Trans Cost
+ 
+Creates a single segment, case specific TransCost for Oil linked to the Eco Start date. Overwrites pre-existing TransCost. TransCosts are unit volume costs paid only by revenue interest holders. Units are case currency divided by case's Oil base volume unit. e.g. $/bbl. No unit conversions calculated. No multi-segment expense support. Requires "Primary Import ID Code" only.
+ 
+
+Init Water Op Cost
+ 
+Creates a single segment, case specific OpCost for Water linked to the Eco Start date. Overwrites pre-existing OpCost. OpCosts are unit volume costs paid only by working interest holders. Units are case currency divided by case's Water base volume unit. e.g. $/bbl. No unit conversions calculated. No multi-segment expense support. Requires "Primary Import ID Code" only.
+ 
+
+Init Well Cost (100% $/w/m)
+ 
+Creates a single segment, case specific cost linked to the Eco Start date. Overwrites pre-existing Well Cost. Well Cost is paid only by working interest holders and is multiplied by well count. Units are case currency. e.g. $ or $C. No currency conversions calculated. Project default currency used for new cases. No multi-segment expense support. Requires "Primary Import ID Code" only.
+ 
+
+NGL Price
+ 
+Creates a single segment, case specific, initial (linked to Eco Start Date) NGL price overwriting all existing pricing. Price units will be the case currency (case specific) divided by the import convention's NGL base unit. Requires "Primary Import ID Code" only.
+ 
+
+NGL Price Diff ($)
+ 
+Creates a single segment, case specific NGL currency price differential. This differential is either additive or subtractive and applies after the % differential. Units will be in the case's currency (case specific) divided by  NGL's base units. i.e. $/bbl $/gal. No unit conversions are applied on import. If a new case is built, the projects default currency and import conventions base units will be assumed. Requires "Primary Import ID Code" only.
+ 
+
+NGL Price Diff (%)
+ 
+Creates a single segment, case specific NGL percent price differential. This differential is a positive or negative percentage (%) adjustment factor. (10% increases, -10% decreases) This adjustment represents the % change. Factors to 7 decimal places are supported. Units are dimensionless. Applied before the $ differential. Requires "Primary Import ID Code" only.
+ 
+
+NGL Sev Tax ($/vol)
+ 
+Maps by case to the NGL State tax for US and International modeling. Will create a single segment, case specific State tax with initial $/vol tax rate equal to imported value. If used with "NGL Sev (%)," both will appear in the segment. Any existing State tax will be replaced. Units are in case's currency per case's base unit and support 3 decimal places. No volume conversions applied. No multi-segment support. No Canadian equivalent. Requires "Primary Import ID Code" only.
+ 
+
+NGL Sev Tax (%)
+ 
+Creates a single segment, case specific NGL State tax for US and International modeling. Overwrites any existing state tax. If used with "NGL Sev ($/vol)," both will appear in the single segment. For cases with existing case specific State tax, the single segment's rate will be edited. Units in % and supports 9 decimal places. No multi-segment support. No Canadian equivalent. Requires "Primary Import ID Code" only.
+ 
+
+Oil Price Diff ($)
+ 
+Creates a single segment, case specific Oil currency price differential. This differential is either additive or subtractive and applies after the % differential. Units will be in the case's currency (case specific) divided by Oil's base units. i.e. $/bbl. No unit conversions are applied on import. If a new case is built, the projects default currency and import conventions base units will be assumed. Requires "Primary Import ID Code" only.
+ 
+
+Oil Price Diff (%)
+ 
+Creates a single segment, case specific Oil percent price differential. This differential is a positive or negative percentage (%) adjustment factor. (10% increases, -10% decreases) This adjustment represents the % change. Factors to 7 decimal places are supported. Units are dimensionless. Applied before the $ differential. Requires "Primary Import ID Code" only.
+ 
+
+Oil Sev Tax ($/vol)
+ 
+Maps by case to the Oil State tax for US and International modeling. Will create a single segment, case specific State tax with initial $/vol tax rate equal to imported value. If used with "Oil Sev (%)," both will appear in the segment. Any existing State tax will be replaced. Units are in case's currency per case's base unit and support 3 decimal places. No volume conversions applied. No multi-segment support. No Canadian equivalent. Requires "Primary Import ID Code" only.
+ 
+
+Oil Sev Tax (%)
+ 
+Creates a single segment, case specific Oil State tax for US and International modeling. Overwrites any existing state tax. If used with "Oil Sev ($/vol)," both will appear in the single segment. For cases with existing case specific State tax, the single segment's rate will be edited. Units in % and supports 9 decimal places. No multi-segment support. No Canadian equivalent. Requires "Primary Import ID Code" only.
+ 
+
+hmtoggle_plus1 Prod Volumes
+
+
+
+Annual Gas (M units) [Prod Date]
+ 
+Must be preceded by "Production Date" token. Only the year is used from the date token. Each month numeric GAS value in the year specified by the date token will be populated with the imported value divided by 12. Units are expected to be 1000 times the base units of the convention used to import the data. i.e. MMcf, E6M3, etc.
+ 
+
+Annual Gas [Prod Date]
+ 
+Must be preceded by "Production Date" token. Only the year is used from the date token. Each month numeric GAS value in the year specified by the date token will be populated with the imported value divided by 12. Units are expected to be in base units of the convention used to import the data. i.e. Mcf, E3M3, etc.
+ 
+
+Annual Oil (M units) [Prod Date]
+ 
+Must be preceded by "Production Date" token. Only the year is used from the date token. Each month numeric OIL value in the year specified by the date token will be populated with the imported value divided by 12. Units are expected to be 1000 times the base units of the convention used to import the data. i.e. MBbl, E3M3, etc.
+ 
+
+Annual Oil [Prod Date]
+ 
+Must be preceded by "Production Date" token. Only the year is used from the date token. Each month numeric OIL value in the year specified by the date token will be populated with the imported value divided by 12. Units are expected to be in base units of the convention used to import the data. i.e. bbls, M3 etc.
+ 
+
+Annual User-Def Vol (M units) [Prod Date]
+ 
+Must be preceded by "Production Date" token. Only the year is used from the date token. Each month numeric User Defined Product (as defined by the field name) value in the year specified by the date token will be populated with the imported value divided by 12. Units are expected to be 1000 times the base units of the convention used to import the data. i.e. MBbl, E3M3, etc. PHDWin will match on the import fields name to define the product.
+ 
+
+Annual User-Def Vol [Prod Date]
+ 
+Must be preceded by "Production Date" token. Only the year is used From the date token. Each month numeric Used Defined Product (as defined by the field name) value in the year specified by the date token will be populated with the imported value divided by 12. Units are expected to be in base units of the convention used to import the data. i.e. bbls, M3 etc.  PHDWin will match on the import fields name to define the product.
+ 
+
+Annual Water (M units) [Prod Date]
+ 
+Must be preceded by "Production Date" token. Only the year is used from the date token. Each month numeric WATER value in the year specified by the date token will be populated with the imported value divided by 12. Units are expected to be 1000 times the base units of the convention used to import the data. i.e. MBbl, E3M3, etc.
+ 
+
+Annual Water [Prod Date]
+ 
+Must be preceded by "Production Date" token. Only the year is used from the date token. Each month numeric WATER value in the year specified by the date token will be populated with the imported value divided by 12. Units are expected to be in base units of the convention used to import the data. i.e. MBbl, E3M3, etc.
+ 
+
+Condensate Cum Prior Hist
+ 
+Imports known Condensate cums prior to monthly historical input.
+ 
+
+Condensate Shrink (%)
+ 
+Creates a single segment, case specific Condensate % volume shrinkage. Overwrites existing shrinkage. Units in % shrink and supports 9 decimal places. Cannot be used with "Condensate Shrink (fixed)". No support for multi-segment shrinkage import. Trying to import multiple segments will result in only last segment being used. Requires "Primary Import ID Code" only.
+ 
+
+Condensate Shrink (fixed)
+ 
+Creates a single segment, case specific Condensate fixed volume shrinkage and is the volume per month shrunk in base units as defined by the case. Overwrites existing shrinkage; if multiple segments are imported, only last value is used. No unit conversions are calculated. Supports negative and positive values to 12 digits (combined, including all digits and decimal.) Cannot be used with "Condensate Shrink (%)". Overwrites all existing shrink. Requires "Primary Import ID Code" only.
+ 
+
+Condensate Shrink (frac)
+ 
+Creates a single segment, case specific Condensate % volume shrinkage. Units are fractional and represent remaining volume. A 0.94 value represents a 6% shrinkage. Converted to % shrinkage. Overwrites any existing shrink. Supports 9 decimal places. Cannot be used with "Condensate Shrink (Fixed)" or "Condensate Shrink (%)". No support for multi-segment shrinkage import. Import of multiple Shrink (%) per case not compounded, rather last value used. Requires "Primary Import ID Code" only.
+ 
+
+Days On [Prod Date]
+ 
+Must be preceded by "Production Date" token. Monthly total of producing days will be populated for the production month specified by Production Date.
+ 
+
+Days Cum Prior Hist
+ 
+Imports known days cum prior to monthly historical input.
+ 
+
+Gas Inj [Prod Date]
+ 
+Must be preceded by "Production Date" token.  Monthly numeric gas injection volume will be populated for the production month specified by Production Date.  Units are based on convention used to import.  i.e. Mcf, E3M3, etc.
+ 
+
+Gas Production [Prod Date]
+ 
+Must be preceded by "Production Date" token. Monthly numeric gas volume will be populated for the production month specified. Units are expected to be in base units of the convention used to import the data. i.e. Mcf, E3M3, etc.
+ 
+
+Gas Shrink (%)
+ 
+Creates a single segment, case specific Gas % volume shrinkage. Units in % shrunk and supports 9 decimal places. Can not be used with "Gas Shrink (Fixed)". No support for multi-segment shrinkage import. Import of multiple Shrink (%) per case are not compounded, rather the last value used.  Requires "Primary Import ID Code" only.
+ 
+
+Gas Shrink (fixed)
+ 
+Creates a single segment, case specific Gas fixed volume shrinkage and is the volume per month shrunk in base units as defined by the case. Overwrites existing shrinkage; if multiple segments are imported, only last value is used. No unit conversions are calculated. Supports negative and positive values to 12 digits (combined, including all digits and decimal.) Cannot be used with "Gas Shrink (%)". Overwrites all existing shrink. Requires "Primary Import ID Code" only.
+ 
+
+Gas Shrink (frac)
+ 
+Creates a single segment, case specific Gas % volume shrinkage. Units are fractional and represent remaining volume. A 0.94 value represents a 6% shrinkage. Converted to % shrinkage. Overwrites any existing shrink. Supports 9 decimal places. Cannot be used with "Gas Shrink (Fixed)" or "Gas Shrink (%)".  A second shrink segment can be created with the Gas Shrink 2nd token, which uses its own column.  Requires "Primary Import ID Code" only.
+ 
+
+Gas Shrink 2nd (frac)
+ 
+Creates a single segment, case specific Gas % volume shrinkage. Units are fractional and represent remaining volume. A 0.94 value represents a 6% shrinkage. Converted to % shrinkage. Overwrites any existing shrink. Supports 9 decimal places. Cannot be used with "Gas Shrink (Fixed)" or "Gas Shrink (%)". Used in conjunction with Gas Shrink (frac). Requires "Primary Import ID Code" only.
+ 
+
+Hours On [Prod Date]
+ 
+Must be preceded by "Production Date" token. Monthly total of producing hours will be populated for the production month specified by Production Date.
+ 
+
+Liquids Inj [Prod Date]
+ 
+Must be preceded by "Production Date" token.  Monthly numeric liquids injection volume will be populated for the production month specified by Production Date.  Units are based on convention used to import.  i.e. bbl, etc.
+ 
+
+NGL Cum Prior Hist
+ 
+Imports known NGL cums prior to monthly historical input.
+ 
+
+NGL Shrink (%)
+ 
+Creates a single segment, case specific NGL % volume shrinkage. Overwrites existing shrinkage. Units in % shrink and supports 9 decimal places. Cannot be used with "NGL Shrink (fixed)". No support for multi-segment shrinkage import. Trying to import multiple segments will result in only last segment being used. Requires "Primary Import ID Code" only.
+ 
+
+NGL Shrink (fixed)
+ 
+Creates a single segment, case specific NGL fixed volume shrinkage and is the volume per month shrunk in base units as defined by the case. Overwrites existing shrinkage; if multiple segments are imported, only last value is used. No unit conversions are calculated. Supports negative and positive values to 12 digits (combined, including all digits and decimal.) Cannot be used with "NGL Shrink (%)". Overwrites all existing shrink. Requires "Primary Import ID Code" only.
+ 
+
+NGL Shrink (frac)
+ 
+Creates a single segment, case specific NGL % volume shrinkage. Units are fractional and represent remaining volume. A 0.94 value represents a 6% shrinkage. Converted to % shrinkage. Overwrites any existing shrink. Supports 9 decimal places. Cannot be used with "NGL Shrink (Fixed)" or "NGL Shrink (%)". No support for multi-segment shrinkage import. Import of multiple Shrink (%) per case not compounded, rather last value used. Requires "Primary Import ID Code" only.
+ 
+
+Oil Cum Prior Hist
+ 
+Imports known oil cums prior to monthly historical input.
+ 
+
+Oil Production [Prod Date]
+ 
+Must be preceded by "Production Date" token. Monthly numeric oil volume will be populated for the production month specified. Units are expected to be in base units of the convention used to import the data. i.e. MBbl, E3M3, etc.
+ 
+
+Oil Shrink (%)
+ 
+Creates a single segment, case specific Oil % volume shrinkage. Overwrites existing shrinkage. Units in % shrink and supports 9 decimal places. Cannot be used with "Oil Shrink (fixed)". No support for multi-segment shrinkage import. Trying to import multiple segments will result in only last segment being used. Requires "Primary Import ID Code" only.
+ 
+
+Oil Shrink (fixed)
+ 
+Creates a single segment, case specific Oil fixed volume shrinkage and is the volume per month shrunk in base units as defined by the case. Overwrites existing shrinkage; if multiple segments are imported, only last value is used. No unit conversions are calculated. Supports negative and positive values to 12 digits (combined, including all digits and decimal.) Cannot be used with "Oil Shrink (%)". Overwrites all existing shrink. Requires "Primary Import ID Code" only.
+ 
+
+Oil Shrink (frac)
+ 
+Creates a single segment, case specific Oil % volume shrinkage. Units are fractional and represent remaining volume. A 0.94 value represents a 6% shrinkage. Converted to % shrinkage. Overwrites any existing shrink. Supports 9 decimal places. Cannot be used with "Oil Shrink (Fixed)" or "Oil Shrink (%)". No support for multi-segment shrinkage import. Import of multiple Shrink (%) per case not compounded, rather last value used. Requires "Primary Import ID Code" only.
+ 
+
+Prod year (yyyy)- Start Record
+ 
+Specifies the year for columnar production.  Used in conjunction with "______ Production (month)" tokens.
+ 
+
+Production Date
+ 
+This is the date for importing production data in conjunction with tokens that list [Prod Date].  This date should be in format mm/dd/yyyy (or the corresponding non-US format) and the days (dd) should be listed as 1 for the first day of the month because production with this token is monthly.
+ 
+
+User-Defined Product [Prod Date]
+ 
+Must be preceded by "Production Date" token. Monthly numeric user defined (as defined by the field name) volume will be populated for the production month specified.  Units are expected to be in base units of the convention used to import the data. i.e. MBbl, E3M3, etc.  PHDWin will match on the import fields name to define the product.
+ 
+
+Water Cum Prior Hist
+ 
+Imports known water cums prior to monthly historical input.
+ 
+
+Water Inj [Prod Date]
+ 
+Must be preceded by "Production Date" token. Monthly numeric water injection volume will be populated for the production month specified. Units are expected to be in base units of the convention used to import the data. i.e. bbl, etc.
+ 
+
+Water Production [Prod Date]
+ 
+Must be preceded by "Production Date" token. Monthly numeric water volume will be populated for the production month specified. Units are expected to be in base units of the convention used to import the data. i.e. bbl, etc.
+ 
+
+Well Count [Prod Date]
+ 
+Must be preceded by "Production Date" token. Monthly numeric well count number will be populated for the production month specified.
+ 
+
+hmtoggle_plus1 Test Data
+
+
+
+BHP/Z
+ 
+Maps one Bottom Hole Pressure divided by Z production test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" or "Well Number-Start Test-No Append" w/"Test Date" on same line. Units are defined by existing case convention for existing cases or default import unit convention for new cases. 
+ 
+
+Choke Size
+ 
+Maps one choke size per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" or "Well Number-Start Test-No Append" w/ "Test Date" on same line. Units are defined by existing case convention for existing cases or default import unit convention for new cases
+ 
+
+CSGP
+ 
+Maps one Casing Pressure per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" or "Well Number-Start Test-No Append" w/"Test Date" on same line. Units are defined by existing case convention for existing cases or default import unit convention for new cases
+ 
+
+FTP
+ 
+Maps one Flowing Tubing Pressure per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" or "Well Number-Start Test-No Append" w/ "Test Date" on same line. Units are defined by existing case convention for existing cases or default import unit convention for new cases.
+ 
+
+Gas Composition- C1
+ 
+Populates fluid properties' C1 (methane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.8052)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- C2
+ 
+Pololpulates fluid properties' C2 (ethane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0552)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- C3
+ 
+Populates fluid properties' C3 (propane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0052)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- CO2
+ 
+Populates fluid properties' CO2 (carbon dioxide) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0052)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition-  H2
+ 
+Populates fluid properties' H2 (hydrogen) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0052)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition-  H2O
+ 
+Populates fluid properties' H2O (water) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0052)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- H2S
+ 
+Populates fluid properties' H2S (hydrogen sulfide) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0052)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- He
+ 
+Populates fluid properties' He (helium) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0002)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- iC4
+ 
+Populates fluid properties' iC4 (iso-butane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0052)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- iC5
+ 
+Populates fluid properties' iC5 (iso-pentane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0052)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- N2
+ 
+Populates fluid properties' N2 (Nitrogen) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0052)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- nC10
+ 
+Populates fluid properties' nC10 (decane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0552)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- nC4
+ 
+Populates fluid properties' nC4 (normal-butane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0552)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- nC5
+ 
+Populates fluid properties' nC5 (normal-pentane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0552)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- nC6
+ 
+Populates fluid properties' C6 (hexane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0552)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- nC7
+ 
+Populates fluid properties' C7 (heptane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0552)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- nC8
+ 
+Populates fluid properties' C8 (octane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0552)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+Gas Composition- nC9
+ 
+Populates fluid properties' C9 (nonane) mole fraction (NOT %) for a given "Fluids Test" date to 5 decimal places. (e.g. 0.0552)  Only one per Fluids Test date.  Requires "Fluids Date - Start Record."
+ 
+
+SIBHP
+ 
+Maps one Shut-in Bottom Hole Pressure per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" or "Well Number-Start Test-No Append" w/"Test Date" on same line. Units are defined by existing case convention for existing cases or default import unit convention for new cases.
+ 
+
+SITP
+ 
+Maps one Shut-in Bottom Tubing Pressure per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" or "Well Number-Start Test-No Append" w/"Test Date" on same line. Units are defined by existing case convention for existing cases or default import unit convention for new cases.
+ 
+
+Test Cum Gas
+ 
+Maps value to Gas Cumulative Production field for a given test record. Used with "Test Date-Start Record" OR "Upper Perf-Start Test" w/ "Test Date" OR "Well Number-Start Test" w/ "Test Date" OR "Well Num-Start Test-No Append" w/ "Test Date". Units are in existing cases gas base units or import convention's gas base units for new cases. No conversions are calculated.
+ 
+
+Test Cum Gas (M vol)
+ 
+Maps value to Gas Cumulative Production field for a given test record. Used with "Test Date-Start Record" OR "Upper Perf-Start Test" w/ "Test Date" OR "Well Number-Start Test" w/ "Test Date" OR "Well Num-Start Test-No Append" w/ "Test Date". Units are in 1000 times (M) existing case's gas base units or 1000 times (M) import convention's gas base units for new cases. No conversions are calculated.
+ 
+
+Test Cum Oil
+ 
+Maps value to Oil Cumulative Production field for a given test record. Used with "Test Date-Start Record" OR "Upper Perf-Start Test" w/ "Test Date" OR "Well Number-Start Test" w/ "Test Date" OR "Well Num-Start Test-No Append" w/ "Test Date". Units are in existing cases oil base units or import convention's oil base units for new cases. No conversions are calculated.
+ 
+
+Test Cum Oil (M vol)
+ 
+Maps value to Oil Cumulative Production field for a given test record. Used with "Test Date-Start Record" OR "Upper Perf-Start Test" w/ "Test Date" OR "Well Number-Start Test" w/ "Test Date" OR "Well Num-Start Test-No Append" w/ "Test Date". Units are in 1000 times (M) existing case's Oil's base units or 1000 times (M) import convention's Oil base units for new cases. No conversions are calculated.
+ 
+
+Test Cum Water
+ 
+Maps value to Water Cumulative Production field for a given test record. Used with "Test Date-Start Record" OR "Upper Perf-Start Test" w/ "Test Date" OR "Well Number-Start Test" w/ "Test Date" OR "Well Num-Start Test-No Append" w/ "Test Date". Units are in existing cases water base units or import convention's Water base units for new cases. No conversions are calculated.
+ 
+
+Test Cum Water (M vol)
+ 
+Maps value to Water Cumulative Production field for a given test record. Used with "Test Date-Start Record" OR "Upper Perf-Start Test" w/ "Test Date" OR "Well Number-Start Test" w/ "Test Date" OR "Well Num-Start Test-No Append" w/ "Test Date". Units are in 1000 times (M) existing case's water base units or 1000 times (M) import convention's Water base units for new cases. No conversions are calculated. 
+ 
+
+Test Date
+ 
+Date for each test. Supports one test per day per wellbore/completion. Always used with "Well-Number-Start Test" or "Well Num-Start Test-No Append" or "Upper Perf-Start Test"
+ 
+
+Test Date- Start Record
+ 
+Starts a test record and sets the test date. Supports one test per day. Never used with "Well Number-Start Test" or "Well Num-Start Test-No Append" or"Upper Perf-Start Test"
+ 
+
+Test Day- Start Record
+ 
+Starts a test record and sets the test date. Supports one test per day. Requires "Test Month" and "Test Year". Used when the test date is in three fields. Never used with "Well Number-Start Test" or "Well Num-Start Test-No Append" or "Upper Perf-Start Test". Numerical day within month.
+ 
+
+Test Gas (vol/day)
+ 
+Maps one Gas Test Rate per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" OR "Well Number-Start Test-No Append" w/"Test Date" on same line. Units are defined by existing Gas base units for existing cases or default import convention Gas base units for new cases. Rate is Per Day.
+ 
+
+Test Month
+ 
+Used with "Test Day-Start Record" to define a test dates month. Month number. Required by "Test Day-Start Record".
+ 
+
+Test Notes
+ 
+Maps alphanumeric value to Test Notes field for a given test record. Used with "Test Date-Start Record" OR "Upper Perf-Start Test" w/ "Test Date" OR "Well Number-Start Test" w/ "Test Date" OR "Well Num-Start Test-No Append" w/ "Test Date".
+ 
+
+Test Oil (vol/day)
+ 
+Maps one Oil Test Rate per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" OR "Well Number-Start Test-No Append" w/"Test Date" on same line. Units are defined by existing Oil base units for existing cases or default import convention base oil unit for new cases. Rate is Per Day.
+ 
+
+Test Water (vol/day)
+ 
+Maps one Water Test Rate per test point. Requires "Test Date-Start Record" OR "Well Number-Start Test" w/ "Test Date" OR "Well Number-Start Test-No Append" w/"Test Date" on same line. Units are defined by existing Water base units for existing cases or default import convention base Water unit for new cases. Rate is Per Day.
+ 
+
+Test Year
+ 
+Used with "Test Day-Start Record" to define a test dates Year. Required by "Test Day-Start Record". Format is YYYY.
+ 
+
+Volumetrics- Bg
+ 
+Imports the gas formation volume factor into the Volumetrics area of a case.
+ 
+
+Volumetrics- Bo
+ 
+Imports the oil formation volume factor into the Volumetrics area of a case.
+ 
+
+Volumetrics- Drainage Area
+ 
+Imports drainage area into the Volumetrics area of a case.
+ 
+
+Volumetrics- Gas RF
+ 
+Imports the gas recovery factor into the Volumetrics area of a case.
+ 
+
+Volumetrics- OGIP
+ 
+Imports original gas in place into the Volumetrics area of a case.
+ 
+
+Volumetrics- Oil RF
+ 
+Imports the oil recovery factor into the Volumetrics area of a case.
+ 
+
+Volumetrics- OOIP
+ 
+Imports original oil in place into the Volumetrics area of a case.
+ 
+
+Volumetrics- Porosity
+ 
+Imports porosity into the Volumetrics area of a case.
+ 
+
+Volumetrics- Res Pres
+ 
+Imports reservoir pressure into the Volumetrics area of a case.
+ 
+
+Volumetrics- Res Temp
+ 
+Imports reservoir temperature into the Volumetrics area of a case.
+ 
+
+Volumetrics- Rsi
+ 
+Imports the reservoir initial GOR into the Volumetrics area of a case.
+ 
+
+Volumetrics- Sg
+ 
+Imports gas saturation into the Volumetrics area of a case.
+ 
+
+Volumetrics- So
+ 
+Imports oil saturation into the Volumetrics area of a case.
+ 
+
+Volumetrics- Sw
+ 
+Imports water saturation into the Volumetrics area of a case.
+ 
+
+Volumetrics- Thickness
+ 
+Imports thickness into the Volumetrics area of a case.
+ 
+
+Volumetrics- Zi
+ 
+Imports the initial Z-Factor into the Volumetrics area of a case.
+ 
+
+Well API Code
+ 
+Maps the Well API Code into the test data "header" for a well.  Requires use of the "Well Num" type token.
+ 
+
+Well Number
+ 
+Used to map test data to existing wells in cases.  The Case Name of a case will be overwritten by this Well Number.
+ 
+
+Well Number- Start Test
+ 
+Used to determine correct well for importing test data into a case.  This token or the "Test Date - Start Record" token is required to successfully import new test data.  Token will also replace Case Name.
+ 
+
+Well Num- No Append Case Name
+ 
+Used to map test data to existing wells in cases.  The Case Name is left fully intact.
+ 
+
+Well Num- Start Test- No Append
+ 
+Used to determine correct well for importing test data into a case.  This token or the "Test Date - Start Record" token is required to successfully import new test data.
+ 
+
+Well State ID Code
+ 
+Imports the Well State ID Code into the well description text of the Production Tests tab of the Case Editor.  Requires use of "Well Num" type token.
+ 
+
+hmtoggle_plus1 Wellbore Completion
+
+
+
+Bottom Hole Latitude
+ 
+Bottom Hole Latitude for the current wellbore record.  The base units are degrees. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Bottom Hole Longitude 
+ 
+Bottom Hole Longitude for the current wellbore record.  The base units are degrees. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Completion API 
+ 
+The Completion API for the current completion record.  This must be a 14-digit API.  If less than 14 digits, then 0’s will be added to the end of the number and if more than 14 digits are input the first 14 will be truncated and only that value will be used. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Completion Date
+ 
+The completion date for the current wellbore record.  The date should be in mm/dd/yyyy format. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Frac Proppant 
+ 
+The Frac Proppant for the current wellbore record.  The base units for the frac proppant is pounds (lb). Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Ground Elevation
+ 
+The Ground elevation for the current wellbore record.  The base units for the ground elevation is feet (ft). Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Hole Direction
+ 
+The hole direction for the current wellbore record.  Options include “Horizontal”, “Vertical” or “Directional”. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Kelly Bushing Elevation 
+ 
+The Kelly Bushing (KB) elevation for the current wellbore record.  The base units are feet (ft). Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Lateral Length 
+ 
+The Lateral Length for the current wellbore record.  The base units are feet (ft). Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Latitude/Longitude Datum
+ 
+The Latitude/Longitude Datum for the current wellbore record.  This value can be a text string or numbers or a combination of the two. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Measured Total Depth 
+ 
+The Measured Total Depth (MTD) for the current wellbore record.  The base units are feet (ft). Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Measured Total Depth Datum
+ 
+The Datum from which the Measured Total Depth (MTD) is measured from.  Options include “Ground Level” or “Kelly Bushing”.   Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Plug Back Measured Total Depth 
+ 
+The Plug Back Measured Total Depth (PBMD) for the current wellbore record.  The base units are feet (ft). Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Plug Back Measured Total Depth Datum
+ 
+The Datum from which the Plug Back Measured Total Depth (PBMD) is measured from.  Options include “Ground Level” or “Kelly Bushing”.   Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Plug Back Total Vertical Depth
+ 
+The Plug Back Total Vertical Depth (PBTVD) for the current wellbore record.  The base units are feet (ft). Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Plug Back Total Vertical Depth Datum
+ 
+The Datum from which the Plug Back Total Vertical Depth (PBTVD) is measured from.  Options include “Ground Level” or “Kelly Bushing”.   Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Plugged Date
+ 
+The Plugged date for the current wellbore record.  The date should be in mm/dd/yyyy format. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Spud Date
+ 
+The spud date for the current wellbore record.  The date should be in mm/dd/yyyy format. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Surface Hole Latitude
+ 
+Surface Hole Latitude for the current wellbore record.  The base units are degrees. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Surface Hole Longitude 
+ 
+Surface Hole Longitude for the current wellbore record.  The base units are degrees. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Total Vertical Depth
+ 
+The Total Vertical Depth (TVD) for the current wellbore record.  The base units are feet (ft). Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Total Vertical Depth Datum 
+ 
+The Datum from which the Total Vertical Depth (TVD) is measured from.  Options include “Ground Level” or “Kelly Bushing”.   Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Tubing Diameter
+ 
+The Tubing diameter for the current wellbore record.  The base units are inches. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Well Lower Perf
+ 
+Imports the lower perf of a well zone into the well description text of the Production Tests tab of the Case Editor.  Requires use of "Well Num" type token.
+ 
+
+Well Upper Perf
+ 
+Imports the upper perf of a well zone into the well description text of the Production Tests tab of the Case Editor.  Requires use of "Well Num" type token.
+ 
+
+Wellbore API
+ 
+The Wellbore API for the current completion record.  This must be a 10-digit API.  If less than 10 digits, then 0’s will be added to the end of the number and if more than 10 digits are input the first 10 will be truncated and only that value will be used. Must be used with the “Well Num” import token to trigger the record.
+ 
+
+Wellbore Status 
+ 
+The Wellbore status.  Options include “Active”, “Inactive” or “P & A”.  Must be used with the “Well Num” import token to trigger the record
+ 
+ 
