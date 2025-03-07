@@ -1,0 +1,58 @@
+
+Importing & Exporting Fiscal Models
+ Top  Previous  Next  
+ 
+
+You can use the fiscal models export & import tool to move fiscal models (cash formula models) from one database to another. They can also be used to create a backup of a model you are working on. The exported files will be .epz files that can be stored wherever you choose.  
+
+To export a model
+
+You can only export one model at a time. To export a model:
+
+1.Go to the Fiscal Models form. 
+
+2.Right-click on model and choose Export. 
+
+3.Choose the Template (cash formula model) you would like to export. 
+
+4.Browse for the location to save the file. You do not get to choose the file name - it will be named the same as the template that you chose with a .epz extension. 
+
+5.Click Export. 
+
+To import a model
+
+You can only import a single model at a time. After you import it, the model will always be brought in as a standalone model. You can move the model to be a part of any tree in the Fiscal Models list by dragging and dropping it where you'd like it to go. To import a model:
+
+1.Go to the Fiscal Models form. 
+
+2.Right-click anywhere in the form and choose Import. 
+
+3.Click on the clip0276 button to browse your computer for the .epz file with the template you'd like to import. 
+
+4.Click Import. 
+ 
+#####
+
+
+Fiscal Models
+ Top  Previous  Next  
+ 
+
+All tax and royalty regimes are calculated in cash formulas. Fiscal models are a collection of cash formulas that model tax calculations for certain countries or states. PHDWin has default fiscal models written for the United States, which are available in the Fiscal Models form. If you need to model another countries fiscal regime, you can contact the consulting team for further assistance. 
+
+To apply a fiscal regime to your cases, click on the Forms Flyout and then double-click on Fiscal Models. 
+
+clip0246
+
+Viewing applied Fiscal Models
+
+On the left-hand side of the fiscal models form, you can see the list of available fiscal models in the database. You can also filter at the top to just the Applied Models to only view the current model applied to the case. If you click on the name of a model, you can see the notes about it on the right to see what it is calculating and the rates for taxes or royalties. 
+
+To apply a new fiscal model
+
+1.Put a check-mark next to the model name - it will most likely be the name of the state or province that the well is in. You can only apply one model from each tree structure. The default trees are a Country & Miscellaneous. The miscellaneous tree is where you could add other non-tax cash formula models that you may need to apply.
+
+2.To edit the default values for the model, go to the Forms flyout and click on the Fiscal Terms forms that you'll see at the bottom of the standard Forms list. Any forms listed here will contain the inputs for the fiscal model that you have applied, such as tax rates or anything that might affect the fiscal regime that you selected. 
+
+3.Double-click on the form to view it and adjust the rates. 
+ 
