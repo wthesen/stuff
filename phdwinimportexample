@@ -1,0 +1,228 @@
+
+Sample CSV imports
+ Top  Previous  Next  
+ 
+
+hmtoggle_plus1 Importing Monthly History
+
+
+
+You can import daily, monthly or test volumes into PHDWin from an Excel spreadsheet.
+
+Step 1 - Set up the file
+
+The first thing you'll need to do is set up your file like the example below. Your spreadsheet should always have headers that indicate what is in each column. 
+
+clip0237
+
+First Column = an ID code - The first column in your spreadsheet will always need to be an ID code that is used in the PHDWin database that you're importing to - such as an API number or any other unique identifier. If you're trying to update cases, this is how PHDWin will know which case to update. If no match is found, the program will prompt you to add a new case. 
+
+General Information (optional) - The next columns can be any sort of general information about the case, which you might want if you are adding new cases. If you're just updating existing ones, this is optional. 
+
+Date - The columns preceding the monthly values should always be the date in the format the corresponds with the regional settings on your computer (for example - mm/dd/yyyy or dd/mm/yyyy). For monthly volumes, it should be the first date of the month. For daily & test volumes, it can be any day of the month. 
+
+Volumes - The next columns should be the volumes or rates that you are trying to import. The order of the products does not matter, and you do not have to fill in zeroes for any product that does not have volumes associated with it. The volumes should always be in the products base units. 
+
+Step 2 - Save the file
+
+You should save the file as a .csv file to import it into PHDWin. 
+
+Step 3 - Create the import layout
+
+Next you'll need to go back into PHDWin and take the steps to create a layout and do the import. Once the layout is created, it can be selected and re-used for future imports to save time. 
+
+1.Go to the Home Ribbon (Tools Section), click on Add/Import and select Import.
+
+2.Choose the file by selecting From My Computer. This will allow you to browse for the file that you saved.
+
+3.Choose the Scenario you'd like to import the data to. 
+
+·The scenario that you choose acts as a filter, and only cases in that scenario will be updated. 
+
+·If you are adding new cases, they will also be added to the scenario you choose.
+
+4.Choose the ID Code to Match Primary Import ID - for this you should select the name of the ID code that you used in the first column of your spreadsheet. 
+
+5.Choose to Display Log that describes which cases were imported as well as any errors. 
+
+6.If no matching ID code is found between your import file and PHDWin, you can choose to Add Unmatched Cases or Skip Unmatched Cases.
+
+7.Click on the button that says Map Data. This is where you will create the layout that tells the program where to import the data from your spreadsheet into PHDWin.
+
+clip0046
+
+8.Click the Plus button next to Layout to add a new one and give it a name. Then drag the available PHDWin fields on the left to match up with the correct columns in the spreadsheet that are defined on the right. 
+
+·The sample above shows the fields you'd use for monthly historical production volumes. 
+
+·The first column is always "Primary Import ID"
+
+·The date should be mapped up to "Production Date". All of the columns containing product volumes should be mapped up to the tokens with the product name followed by [ProductionDate]. For example - Gas Production [Production Date]. 
+
+oFor products that do not have specific tokens, you can use User-defined Product [Production date]. Then PHDWin will refer to the name of the column in the .csv file and import volumes to the product with that name. 
+
+·You can also import daily & test volumes using the appropriate tokens. 
+
+9.Once you've finished mapping up all columns, click on Import. This will update existing cases with new production data, and add any new cases that are found. 
+ 
+
+hmtoggle_plus1 Importing Price, Expense or Shrinkage Decks
+
+
+
+You can import custom prices, expenses or shrinkage to each case using the Deck Import tokens. 
+
+Step 1 - Set up the file
+
+The first thing you'll need to do is set up your file somewhat like the example below. Your spreadsheet should always have headers that indicate what is in each column. The actual columns included can vary. Certain columns, like Cap Value, are optional.  
+
+clip0273
+
+This sample includes all columns and gives an example of how to import:
+
+·a price that starts on a specific date and changes over time and has a cap value
+
+·a fixed price escalation that starts on a specific date and continues until the economic limit
+
+·a fixed cost that begins on Segment 1 of the major phase and continues until the economic limit
+
+ 
+
+First Column = an ID code - The first column in your spreadsheet will always need to be an ID code that is used in the PHDWin database that you're importing to - such as an API number or any other unique identifier. If you're trying to update cases, this is how PHDWin will know which case to update. If no match is found, the program will prompt you to add a new case. 
+
+General Information (optional) - The next columns can be any sort of general information about the case, which you might want if you are adding new cases. If you're just updating existing ones, this is optional. 
+
+Deck Start - The date is only required for the first segment of the deck. It can be populated with a hard-coded or linked date when the price/expense/shrinkage begins. The length of each segment is set with the # of Months in the next column. 
+
+Deck Product - The product that the price, expense or shrinkage is applied to. For Fixed expenses, use "Case", for Well expenses, use "Well". Shrinkage can only be applied to Gas-type products. Revenue can be applied to any volume based product. 
+
+Deck Stream - The default streams are Revenue, Op Cost, Trans Cost, Other Cost, Well Cost, Fixed Cost, or Shrunk Volume.  
+
+Deck Value - The value of price, expense or shrinkage. 
+
+Deck Length (mos.) - The number of months that the segment lasts. This must be populated for each segment of the deck. To continue until the economic limit, input ECL. 
+
+Deck Units - The units for the deck. The units are only required for gas prices (and will be mcf or MMbtu).  
+
+Deck Cap Value - Only applicable to the base price or expense. Not applicable to shrinkage, escalations or differentials. This value should be set on the first segment of the deck and all others will be ignored. 
+
+Deck Fixed Esc - Set to 1(True) or 0(False).
+
+ 
+
+ 
+
+Step 2 - Save the file
+
+You should save the file as a .csv file to import it into PHDWin. 
+
+Step 3 - Create the import layout
+
+Next you'll need to go back into PHDWin and take the steps to create a layout and do the import. Once the layout is created, it can be selected and re-used for future imports to save time. 
+
+1.Go to the Home Ribbon (Tools Section), click on Add/Import and select Import.
+
+2.Choose the file by selecting From My Computer. This will allow you to browse for the file that you saved.
+
+3.Choose the Scenario you'd like to import the data to. 
+
+·The scenario that you choose acts as a filter, and only cases in that scenario will be updated. 
+
+·If you are importing qualified data, the primary qualifier for that scenario will be updated. Qualified data include expenses, investments, multipliers, ownership, prices, projections & shrinkage. 
+
+·If you are adding new cases, they will also be added to the scenario you choose.
+
+4.Choose the ID Code to Match Primary Import ID - for this you should select the name of the ID code that you used in the first column of your spreadsheet. 
+
+5.Choose to Display Log that describes which cases were imported as well as any errors. 
+
+6.If no matching ID code is found between your import file and PHDWin, you can choose to Add Unmatched Cases or Skip Unmatched Cases.
+
+7.Click on the button that says Map Data. This is where you will create the layout that tells the program where to import the data from your spreadsheet into PHDWin.
+
+clip0044
+
+8.Click on the Plus button next to Layout and give it a name. Then drag the available PHDWin fields on the left to match up with the correct columns in the spreadsheet that are defined on the right. These fields are all found in the Price/Expense grouping.
+
+·The sample above shows the correct mapping. 
+
+·The first column should always be mapped to "Primary Import ID". 
+
+·The rest of the token names will match the sample spreadsheet. 
+
+9.Once you've finished mapping up all columns, click on Import. This will update existing cases with new production data, and add any new cases that are found
+ 
+ 
+#####
+
+ would like to import production, price, test data etc. from a spreadsheet program such as Excel into PHDWin, it must be saved as a .csv file first. Then, you can import the data by creating a layout that maps up the fields in your spreadsheet into fields in PHDWin. 
+
+To save your spreadsheet as a .csv file
+
+1.Open your file in your spreadsheet program.
+
+2.Click on File and choose Save As.
+
+3.Under Save as type, choose CSV (Comma delimited). 
+
+4.Click Save. You may see a message that your file "may contain features that are not compatible with CSV." This message is to inform you that any formatting you may have (such as colors or bold text) and any formulas will not be preserved in the CSV formatted file. Click Yes to continue.
+
+ 
+
+To import the file into PHDWin
+
+1.Go to the Home Ribbon (Tools Section), click on Add/Import and select Import.
+
+2.Choose the file to import using one:
+
+oFrom My Computer - to browse for your *.csv file. 
+
+3.Choose the Scenario you'd like to import the data to. 
+
+·The scenario that you choose acts as a filter, and only cases in that scenario will be updated. 
+
+·If you are importing qualified data, the primary qualifier for that scenario will be updated. Qualified data include expenses, investments, multipliers, ownership, prices, projections & shrinkage. 
+
+·If you are adding new cases, they will also be added to the scenario you choose.
+
+4.Choose to Display Log file Always, Never or On Error. 
+
+5.If no matching ID code is found between your import file and PHDWin, you can choose to Add Unmatched Cases or Skip Unmatched Cases.
+
+6.Click on Map Data to open the Import Center - Mapping. This is where you will map up the fields in your spreadsheet to the correct inputs in PHDWin.
+
+7.If this is the first time you have done this type of import, you will need to click on the Plus button next to Layout to add a new one. If you plan to do the same type of import multiple times, you can see the section on Reusing import layouts.
+
+ 
+
+clip0145
+
+ 
+
+8.Give the new Layout a name. If the layout is similar to another yo have set up, you can check the box to Copy Layout. 
+
+9.Next you will need to map up the data fields. To do this, drag the PHDWin fields on the left to the matching columns in your spreadsheet.  
+
+·The first column should always be "Primary Import ID Code".  
+
+·The sample image below shows how you would map up the water production token to the correct Source Field in your .csv file. 
+
+·If you map up something incorrectly, you can click on the buttons to Clear Table to remove all fields, or Clear Item to remove the selected line. 
+
+·See Sample CSV Imports for examples on how to import monthly data, prices, expenses or shrinkage
+
+ 
+
+clip0129
+
+ 
+
+10.By default, PHDWin will only add new data that is not yet filled out in the program. For example, if you are importing monthly data, only new months of data will be imported. However, if you'd like to update existing data and replace it with what is in your spreadsheet, you can check the box to Replace the appropriate items. 
+
+11.Once you are finished mapping, click Import. This will automatically save the layout. 
+
+ 
+
+Reusing Import Layouts 
+
+If you plan to use the same file format over and over for a certain type of import, you can reuse the same import layout. To do this, you will select you file like normal, click on Map Data and choose the previously created layout. The layout will recognize column names that are the same and automatically map them up for you. If there are any discrepancies in the column names, you will see a warning in the lower lefthand corner. The warning will tell you why certain fields were not mapped up. You can click Clear All to remove them. This will give you the ability to remap any fields that were left out or Cancel to fix your spreadsheet and make sure the column names were 
